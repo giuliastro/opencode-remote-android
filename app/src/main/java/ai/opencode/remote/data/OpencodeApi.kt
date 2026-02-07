@@ -43,7 +43,7 @@ class OpencodeApi {
 
     private val client = OkHttpClient.Builder()
         .connectTimeout(8, TimeUnit.SECONDS)
-        .readTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(180, TimeUnit.SECONDS)
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
@@ -114,6 +114,19 @@ class OpencodeApi {
             SendMessageRequest(parts = listOf(ai.opencode.remote.model.TextPartInput(text = message))),
             SendMessageRequest.serializer(),
             MessageEnvelopeDto.serializer()
+        )
+
+    suspend fun sendMessageAsync(
+        config: ServerConfig,
+        sessionId: String,
+        message: String,
+        directory: String? = null
+    ): Boolean =
+        postNoContent(
+            config,
+            "/session/$sessionId/prompt_async" + buildQuery("directory" to directory),
+            SendMessageRequest(parts = listOf(ai.opencode.remote.model.TextPartInput(text = message))),
+            SendMessageRequest.serializer()
         )
 
     suspend fun sendCommand(
@@ -203,6 +216,28 @@ class OpencodeApi {
             .patch(jsonBody.toRequestBody("application/json".toMediaType()))
             .build()
         execute(request, serializer)
+    }
+
+    private suspend fun <B> postNoContent(
+        config: ServerConfig,
+        path: String,
+        body: B,
+        bodySerializer: kotlinx.serialization.KSerializer<B>
+    ): Boolean = withContext(Dispatchers.IO) {
+        val jsonBody = json.encodeToString(bodySerializer, body)
+        val request = request(config, path)
+            .post(jsonBody.toRequestBody("application/json".toMediaType()))
+            .build()
+        client.newCall(request).execute().use { response ->
+            val payload = response.body?.string().orEmpty()
+            if (!response.isSuccessful) {
+                val err = runCatching {
+                    json.decodeFromString(ErrorMessageDto.serializer(), payload)
+                }.getOrNull()
+                throw IOException(err?.message ?: err?.name ?: "HTTP ${response.code}")
+            }
+            true
+        }
     }
 
     private suspend fun delete(config: ServerConfig, path: String): Boolean = withContext(Dispatchers.IO) {

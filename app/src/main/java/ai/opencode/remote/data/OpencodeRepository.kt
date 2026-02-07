@@ -143,7 +143,8 @@ class OpencodeRepository(
 
     suspend fun sendMessage(sessionId: String, text: String, directory: String?) {
         runCatching {
-            api.sendMessage(_config.value, sessionId, text, directory)
+            api.sendMessageAsync(_config.value, sessionId, text, directory)
+            delay(400)
             loadSessionDetail(sessionId, directory)
             refreshSessions()
         }.onFailure {
