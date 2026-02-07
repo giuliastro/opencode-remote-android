@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "ai.opencode.remote"
-    compileSdk = 35
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "ai.opencode.remote"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0.0"
 
@@ -55,7 +55,7 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
