@@ -496,8 +496,10 @@ private fun SessionDetailScreen(
                         val value = text.trim()
                         if (value.isBlank()) return@Button
                         if (isCommand) {
-                            val command = value.substringBefore(" ")
-                            val args = value.substringAfter(" ", "")
+                            val normalized = value.removePrefix("/")
+                            val command = normalized.substringBefore(" ").trim()
+                            if (command.isBlank()) return@Button
+                            val args = normalized.substringAfter(" ", "")
                             onSendCommand(command, args)
                         } else {
                             onSendMessage(value)
