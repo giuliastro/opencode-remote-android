@@ -65,6 +65,8 @@ function toDisplayLines(text: string): string[] {
 }
 
 function App() {
+  type NoticeType = "info" | "success" | "error"
+
   const [config, setConfig] = useState<ServerConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
     if (!saved) return defaultConfig
@@ -78,6 +80,9 @@ function App() {
   const [draftConfig, setDraftConfig] = useState<ServerConfig>(config)
   const [connectedVersion, setConnectedVersion] = useState<string>("")
   const [commands, setCommands] = useState<CommandInfo[]>([])
+  const [helpPage, setHelpPage] = useState<"overview" | "server" | "network" | "troubleshooting" | "commands">(
+    "overview"
+  )
   const [view, setView] = useState<"settings" | "sessions" | "detail" | "help">(() => {
     return config.host && config.port > 0 ? "sessions" : "settings"
   })
@@ -89,9 +94,12 @@ function App() {
   const [query, setQuery] = useState("")
   const [composer, setComposer] = useState("")
   const [busySending, setBusySending] = useState(false)
-  const [statusMessage, setStatusMessage] = useState("Idle")
-  const [error, setError] = useState<string | null>(null)
+  const [testingConnection, setTestingConnection] = useState(false)
+  const [settingsNotice, setSettingsNotice] = useState<{ type: NoticeType; text: string } | null>(null)
+  const [runtimeError, setRuntimeError] = useState<string | null>(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
+  const completionAudioRef = useRef<HTMLAudioElement | null>(null)
+  const wasRunningRef = useRef(false)
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedID) ?? null,
@@ -113,31 +121,38 @@ function App() {
   }, [messages])
 
   const hasConfiguredServer = Boolean(config.host && config.port > 0)
+  const isSessionRunning = Boolean(selectedSession && ["busy", "retry"].includes(selectedSession.status))
 
   function saveConfig() {
     setConfig(draftConfig)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draftConfig))
-    setStatusMessage("Configuration saved")
+    setSettingsNotice({ type: "success", text: "Configuration saved. Press Test to validate connectivity." })
+    setRuntimeError(null)
     if (draftConfig.host && draftConfig.port > 0) {
       setView("sessions")
     }
   }
 
   async function testConnection(configToTest: ServerConfig) {
-    setError(null)
+    setTestingConnection(true)
+    setSettingsNotice({ type: "info", text: "Testing connection..." })
     try {
-      const health = await api.health(configToTest)
+      const health = await Promise.race([
+        api.health(configToTest),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Connection timed out")), 12000))
+      ])
       setConnectedVersion(health.version)
-      setStatusMessage(`Connected to OpenCode ${health.version}`)
+      setSettingsNotice({ type: "success", text: `Connected to OpenCode ${health.version}` })
     } catch (err) {
-      setError((err as Error).message)
-      setStatusMessage("Connection failed")
+      setSettingsNotice({ type: "error", text: `Connection failed: ${(err as Error).message}` })
+    } finally {
+      setTestingConnection(false)
     }
   }
 
   async function refreshSessions(silent = false) {
     if (!config.host || !config.password) return
-    if (!silent) setError(null)
+    if (!silent) setRuntimeError(null)
     try {
       const [items, statuses] = await Promise.all([api.listSessions(config), api.listStatuses(config)])
       const mapped = items
@@ -146,7 +161,7 @@ function App() {
           title: session.title,
           directory: session.directory,
           updated: session.time.updated,
-          status: statuses[session.id]?.type ?? "unknown",
+          status: statuses[session.id]?.type ?? "idle",
           files: session.summary?.files ?? 0,
           additions: session.summary?.additions ?? 0,
           deletions: session.summary?.deletions ?? 0
@@ -154,7 +169,7 @@ function App() {
         .sort((a, b) => b.updated - a.updated)
       setSessions(mapped)
     } catch (err) {
-      setError((err as Error).message)
+      setRuntimeError((err as Error).message)
     }
   }
 
@@ -169,7 +184,7 @@ function App() {
   }
 
   async function loadSelected(sessionID: string, directory: string) {
-    setError(null)
+    setRuntimeError(null)
     try {
       const [msg, todo] = await Promise.all([
         api.loadMessages(config, sessionID, directory),
@@ -178,7 +193,7 @@ function App() {
       setMessages(msg)
       setTodos(todo)
     } catch (err) {
-      setError((err as Error).message)
+      setRuntimeError((err as Error).message)
     }
   }
 
@@ -189,7 +204,7 @@ function App() {
       setSelectedID(created.id)
       await loadSelected(created.id, created.directory)
     } catch (err) {
-      setError((err as Error).message)
+      setRuntimeError((err as Error).message)
     }
   }
 
@@ -200,7 +215,7 @@ function App() {
     setComposer("")
 
     setBusySending(true)
-    setError(null)
+    setRuntimeError(null)
     try {
       if (text.startsWith("/")) {
         const normalized = text.startsWith("/") ? text.slice(1) : text
@@ -214,7 +229,7 @@ function App() {
       await loadSelected(selectedSession.id, selectedSession.directory)
       await refreshSessions()
     } catch (err) {
-      setError((err as Error).message)
+      setRuntimeError((err as Error).message)
     } finally {
       setBusySending(false)
     }
@@ -231,7 +246,7 @@ function App() {
       }
       await refreshSessions(true)
     } catch (err) {
-      setError((err as Error).message)
+      setRuntimeError((err as Error).message)
     }
   }
 
@@ -242,7 +257,7 @@ function App() {
       await refreshSessions()
       await loadSelected(selectedSession.id, selectedSession.directory)
     } catch (err) {
-      setError((err as Error).message)
+      setRuntimeError((err as Error).message)
     }
   }
 
@@ -272,30 +287,51 @@ function App() {
     container.scrollTop = container.scrollHeight
   }, [view, renderedMessages.length, busySending])
 
+  useEffect(() => {
+    completionAudioRef.current = new Audio("/audio/staplebops-01.aac")
+    completionAudioRef.current.preload = "auto"
+  }, [])
+
+  useEffect(() => {
+    if (!selectedSession) {
+      wasRunningRef.current = false
+      return
+    }
+    const runningNow = ["busy", "retry"].includes(selectedSession.status)
+    if (wasRunningRef.current && !runningNow) {
+      const audio = completionAudioRef.current
+      if (audio) {
+        audio.currentTime = 0
+        audio.play().catch(() => undefined)
+      }
+    }
+    wasRunningRef.current = runningNow
+  }, [selectedSession?.id, selectedSession?.status])
+
   return (
     <div className="app-shell">
       <header className="top-nav panel">
         <div>
-          <h1>OpenCode Remote</h1>
+          <h1>🛰️ OpenCode Remote</h1>
           <p className="subtle">Remote control for your OpenCode server</p>
         </div>
         <div className="tab-row">
-          <button className={view === "settings" ? "active" : "secondary"} onClick={() => setView("settings")}>Settings</button>
+          <button className={view === "settings" ? "active" : "secondary"} onClick={() => setView("settings")}>⚙️ Settings</button>
           <button
             className={view === "sessions" ? "active" : "secondary"}
             onClick={() => setView("sessions")}
             disabled={!hasConfiguredServer}
           >
-            Sessions
+            📂 Sessions
           </button>
           <button
             className={view === "detail" ? "active" : "secondary"}
             onClick={() => setView("detail")}
             disabled={!selectedSession}
           >
-            Detail
+            💬 Detail
           </button>
-          <button className={view === "help" ? "active" : "secondary"} onClick={() => setView("help")}>Help</button>
+          <button className={view === "help" ? "active" : "secondary"} onClick={() => setView("help")}>❓ Help</button>
         </div>
       </header>
 
@@ -328,26 +364,22 @@ function App() {
             />
           </label>
           <div className="actions">
-            <button onClick={saveConfig}>Save</button>
-            <button onClick={() => testConnection(draftConfig)} className="secondary">
-              Test
+            <button onClick={saveConfig} disabled={testingConnection}>💾 Save</button>
+            <button onClick={() => testConnection(draftConfig)} className="secondary" disabled={testingConnection}>
+              {testingConnection ? "⏳ Testing..." : "🧪 Test"}
             </button>
           </div>
-          <p className="status">{statusMessage}</p>
+          {settingsNotice && <p className={`notice ${settingsNotice.type}`}>{settingsNotice.text}</p>}
           {connectedVersion && <p className="subtle">Connected version: {connectedVersion}</p>}
-          {error && <p className="error">{error}</p>}
         </section>
       )}
 
       {view === "sessions" && (
         <section className="panel sessions">
           <div className="header-row">
-            <h2>Sessions</h2>
+            <h2>📂 Sessions</h2>
             <div className="inline-actions">
-              <button onClick={createSession}>New</button>
-              <button className="secondary" onClick={() => refreshSessions(true)}>
-                Refresh
-              </button>
+              <button onClick={createSession}>➕ New</button>
             </div>
           </div>
           <input
@@ -367,7 +399,7 @@ function App() {
                 <small>
                   {session.files > 0 || session.additions > 0 || session.deletions > 0
                     ? `changes +${session.additions} / -${session.deletions} · files ${session.files}`
-                    : "no tracked changes yet"}
+                    : `no file changes in summary · updated ${formatTime(session.updated)}`}
                 </small>
                 <div className="inline-actions">
                   <button
@@ -377,26 +409,28 @@ function App() {
                       setView("detail")
                     }}
                   >
-                    Open
+                    ▶ Open
                   </button>
                   <button className="danger" onClick={() => deleteSession(session.id)}>
-                    Delete
+                    🗑 Delete
                   </button>
                 </div>
               </article>
             ))}
           </div>
-          {error && <p className="error">{error}</p>}
+          {runtimeError && <p className="error">{runtimeError}</p>}
         </section>
       )}
 
       {view === "detail" && (
         <main className="panel detail">
           <div className="header-row">
-            <h2>{selectedSession ? selectedSession.title : "Select a session"}</h2>
-            <button className="danger" onClick={abortSession} disabled={!selectedSession}>
-              Stop
-            </button>
+            <h2>{selectedSession ? `💬 ${selectedSession.title}` : "Select a session"}</h2>
+            {isSessionRunning && (
+              <button className="danger" onClick={abortSession} disabled={!selectedSession}>
+                ⛔ Stop
+              </button>
+            )}
           </div>
 
           {selectedSession && (
@@ -405,8 +439,13 @@ function App() {
             </p>
           )}
 
+          {(isSessionRunning || busySending) && (
+            <p className="running-banner">Waiting for OpenCode... processing in progress.</p>
+          )}
+
           <div className="todo-box">
-            <strong>Todo</strong>
+            <strong>🧾 Todo items</strong>
+            <p className="subtle">Generated by OpenCode when it tracks planned tasks for this session.</p>
             {todos.length === 0 && <p className="subtle">No todo items</p>}
             {todos.slice(0, 6).map((item) => (
               <p key={item.id}>
@@ -418,22 +457,13 @@ function App() {
           <div className="messages" ref={messagesRef}>
             {renderedMessages.map((message) => {
                 const lines = toDisplayLines(message.text)
-                const listMode = lines.filter((line) => line.startsWith("- ")).length >= 2
                 return (
                   <article key={message.info.id} className={`message ${message.info.role}`}>
                     <header>
                       <strong>{message.info.role === "user" ? "You" : "OpenCode"}</strong>
                       <small>{formatTime(message.info.time.created)}</small>
                     </header>
-                    {listMode ? (
-                      <ul>
-                        {lines.map((line, index) => (
-                          <li key={index}>{renderInline(line.replace(/^-\s*/, ""))}</li>
-                        ))}
-                      </ul>
-                    ) : (
-                      lines.map((line, index) => <p key={index}>{renderInline(line)}</p>)
-                    )}
+                    {lines.map((line, index) => <p key={index}>{renderInline(line)}</p>)}
                   </article>
                 )
               })}
@@ -451,39 +481,94 @@ function App() {
                 }
               }}
             />
-            <button onClick={send} disabled={!selectedSession || busySending}>
-              {busySending ? "Sending..." : "Send"}
+            <button onClick={send} disabled={!selectedSession || busySending || isSessionRunning}>
+              {busySending || isSessionRunning ? "⏳ Waiting..." : "🚀 Send"}
             </button>
           </div>
-          {error && <p className="error">{error}</p>}
+          {runtimeError && <p className="error">{runtimeError}</p>}
         </main>
       )}
 
       {view === "help" && (
         <section className="panel help">
           <h2>Help</h2>
-          <p className="subtle">How it works</p>
-          <ul>
-            <li>Configure host, port and Basic Auth in Settings.</li>
-            <li>Open a session from Sessions and send prompts from Detail.</li>
-            <li>If input starts with <code>/</code>, the app sends a slash command automatically.</li>
-            <li>Press Enter to send, Shift+Enter for new line.</li>
-          </ul>
+          <div className="help-tabs">
+            <button className={helpPage === "overview" ? "active" : "secondary"} onClick={() => setHelpPage("overview")}>Overview</button>
+            <button className={helpPage === "server" ? "active" : "secondary"} onClick={() => setHelpPage("server")}>Server</button>
+            <button className={helpPage === "network" ? "active" : "secondary"} onClick={() => setHelpPage("network")}>Network</button>
+            <button className={helpPage === "troubleshooting" ? "active" : "secondary"} onClick={() => setHelpPage("troubleshooting")}>Troubleshooting</button>
+            <button className={helpPage === "commands" ? "active" : "secondary"} onClick={() => setHelpPage("commands")}>Commands</button>
+          </div>
 
-          <h3>Available Slash Commands</h3>
-          {commands.length === 0 ? (
-            <p className="subtle">No command list returned by server.</p>
-          ) : (
+          {helpPage === "overview" && (
             <ul>
-              {commands.map((cmd) => (
-                <li key={cmd.name}>
-                  <strong>/{cmd.name}</strong>
-                  {cmd.description ? ` - ${cmd.description}` : ""}
-                </li>
-              ))}
+              <li>Use Settings to configure host, port, username and password.</li>
+              <li>Press Test to validate only the draft values currently in the form.</li>
+              <li>Press Save to apply settings to the running app and polling loop.</li>
+              <li>Open a session from Sessions, then interact in Detail.</li>
+              <li>Press Enter to send prompt, Shift+Enter for a new line.</li>
+              <li>If text starts with <code>/</code>, it is sent as slash command automatically.</li>
             </ul>
           )}
-          {error && <p className="error">{error}</p>}
+
+          {helpPage === "server" && (
+            <div className="help-block">
+              <p className="subtle">Start OpenCode server with Basic Auth</p>
+              <p><strong>macOS/Linux (bash/zsh):</strong></p>
+              <pre>OPENCODE_SERVER_USERNAME=opencode OPENCODE_SERVER_PASSWORD=your-password npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096</pre>
+              <p><strong>Windows PowerShell:</strong></p>
+              <pre>$env:OPENCODE_SERVER_USERNAME="opencode"; $env:OPENCODE_SERVER_PASSWORD="your-password"; npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096</pre>
+              <p><strong>Windows cmd:</strong></p>
+              <pre>set OPENCODE_SERVER_USERNAME=opencode && set OPENCODE_SERVER_PASSWORD=your-password && npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096</pre>
+              <p className="subtle">For browser debugging with CORS, add: <code>--cors http://localhost:5173</code></p>
+            </div>
+          )}
+
+          {helpPage === "network" && (
+            <div className="help-block">
+              <ul>
+                <li>LAN mode: use your PC local IP (for example <code>192.168.1.61</code>).</li>
+                <li>WAN mode is possible via NAT/port-forwarding, VPN, or reverse proxy.</li>
+                <li>Open inbound TCP port (for example 4096) in OS firewall and router/NAT.</li>
+                <li>For external exposure prefer TLS (HTTPS reverse proxy) and strong passwords.</li>
+                <li>Restrict source IPs if possible, and avoid exposing without authentication.</li>
+              </ul>
+            </div>
+          )}
+
+          {helpPage === "troubleshooting" && (
+            <div className="help-block">
+              <p><strong>Quick checks:</strong></p>
+              <ol>
+                <li>Verify server is listening: <code>netstat -ano | findstr :4096</code></li>
+                <li>Check health endpoint from same machine.</li>
+                <li>Check health endpoint from phone browser.</li>
+              </ol>
+              <p><strong>Health check examples:</strong></p>
+              <pre>curl -u opencode:your-password http://127.0.0.1:4096/global/health</pre>
+              <pre>curl -u opencode:your-password http://YOUR_IP:4096/global/health</pre>
+              <p className="subtle">If Settings Test passes but sessions fail, re-open the session and check server model/provider availability.</p>
+            </div>
+          )}
+
+          {helpPage === "commands" && (
+            <>
+              <p className="subtle">Available slash commands from <code>/command</code></p>
+              {commands.length === 0 ? (
+                <p className="subtle">No command list returned by server.</p>
+              ) : (
+                <ul>
+                  {commands.map((cmd) => (
+                    <li key={cmd.name}>
+                      <strong>/{cmd.name}</strong>
+                      {cmd.description ? ` - ${cmd.description}` : ""}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </>
+          )}
+          {runtimeError && <p className="error">{runtimeError}</p>}
         </section>
       )}
     </div>

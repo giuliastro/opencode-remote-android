@@ -1,56 +1,74 @@
-# OpenCode Remote (Web + Android APK)
+# OpenCode Remote
 
-OpenCode Remote is now a web-first mobile UI built with React + Vite, then packaged as Android APK through Capacitor.
+OpenCode Remote is a companion app that lets you control your OpenCode server from phone or desktop, even when you are not at your main workstation.
+It is designed to make daily usage simple: connect to your server, check active sessions, see progress, send new prompts or slash commands, and stop a running action when needed.
 
-This gives fast debugging during development and stable APK generation when needed.
+## What It Can Do
 
-## Features
+- configure and test connection to your OpenCode server
+- browse and monitor sessions (`idle`, `busy`, `retry`)
+- open a session and read messages, todo items, and progress
+- send prompts (and `/commands`) directly from the chat input
+- stop running work when necessary
+- play completion feedback sound when a running session finishes
 
-- manage local OpenCode server credentials and connection
-- list sessions with status (`idle`, `busy`, `retry`)
-- inspect session messages and todo items
-- send prompt text or slash commands to a selected session
-- abort a running session
-- mobile-first responsive layout (works in browser and Android WebView)
+## Technology Stack
 
-## Why Web-First
+- frontend: React + TypeScript + Vite
+- mobile packaging: Capacitor (Android APK)
+- networking: OpenCode HTTP API (`/global/health`, `/session/*`, `/command`)
+- CI/CD: GitHub Actions for cloud APK builds
 
-- faster iteration: no APK rebuild for every bug fix
-- easier debugging with browser network/tools
-- same UI can run in browser and inside Android app
-- APK generated only when you want to install on device
+## OpenCode Server Setup
 
-## Run Locally (Web)
+Start the OpenCode server with network access and Basic Auth.
+
+macOS / Linux (bash/zsh):
+
+```bash
+OPENCODE_SERVER_USERNAME=opencode OPENCODE_SERVER_PASSWORD=your-password npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096
+```
+
+Windows PowerShell:
+
+```powershell
+$env:OPENCODE_SERVER_USERNAME="opencode"
+$env:OPENCODE_SERVER_PASSWORD="your-password"
+npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096
+```
+
+Windows cmd:
+
+```cmd
+set OPENCODE_SERVER_USERNAME=opencode
+set OPENCODE_SERVER_PASSWORD=your-password
+npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096
+```
+
+For browser-based web debugging, add CORS origins as needed:
+
+```bash
+npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096 --cors http://localhost:5173 --cors http://127.0.0.1:5173
+```
+
+For Android APK (Capacitor native HTTP) CORS is usually not required, but keeping explicit origins is still fine.
+
+If you use browser mode from another host/IP, include both localhost and your dev host:
+
+```powershell
+npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096 --cors http://localhost --cors http://localhost:5173 --cors http://<YOUR_PC_IP>:5173
+```
+
+If remote/mobile cannot connect, open TCP 4096 in your OS firewall and network firewall/NAT.
+
+## Run Locally (Web) to test
 
 ```bash
 cd web
 npm install
 npm run dev
 ```
-
 Open the shown URL from your browser (or your phone on the same LAN).
-
-## OpenCode Server Setup
-
-Start the OpenCode server with LAN access and Basic Auth.
-
-PowerShell example:
-
-```powershell
-$env:OPENCODE_SERVER_USERNAME="opencode"
-$env:OPENCODE_SERVER_PASSWORD="your-password"
-npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096 --cors http://localhost:5173
-```
-
-If you open the web UI from another host/IP, add corresponding `--cors` origins.
-
-For Android APK (Capacitor WebView), include `http://localhost` as allowed origin too:
-
-```powershell
-npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096 --cors http://localhost --cors http://localhost:5173 --cors http://<YOUR_PC_IP>:5173
-```
-
-If mobile still cannot connect, allow TCP 4096 through Windows Firewall.
 
 ## Android APK Build (Cloud, no local SDK required)
 

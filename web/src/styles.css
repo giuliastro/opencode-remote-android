@@ -136,6 +136,43 @@ button:disabled {
   color: #0f766e;
 }
 
+.notice {
+  margin-top: 10px;
+  border-radius: 10px;
+  padding: 9px 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.notice.info {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.notice.success {
+  background: #ecfdf5;
+  border: 1px solid #86efac;
+  color: #166534;
+}
+
+.notice.error {
+  background: #fff1f2;
+  border: 1px solid #fda4af;
+  color: #9f1239;
+}
+
+.running-banner {
+  margin-top: 10px;
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 8px 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
 .error {
   margin-top: 10px;
   color: #be123c;
@@ -190,6 +227,15 @@ button:disabled {
   word-break: break-all;
 }
 
+.session-card small {
+  display: block;
+  margin-top: 4px;
+}
+
+.session-card .inline-actions {
+  margin-top: 12px;
+}
+
 .pill {
   border-radius: 999px;
   padding: 3px 8px;
@@ -219,6 +265,7 @@ button:disabled {
   overflow: auto;
   max-height: 48vh;
   margin-top: 12px;
+  scroll-behavior: smooth;
 }
 
 .message {
@@ -288,8 +335,44 @@ button:disabled {
   margin-top: 6px;
 }
 
+.help-tabs {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.help-block {
+  margin-top: 12px;
+}
+
+.help pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  font-family: "Cascadia Code", "Consolas", monospace;
+  font-size: 0.83rem;
+}
+
+.help ol {
+  margin-top: 8px;
+  padding-left: 20px;
+}
+
+.help p {
+  margin-top: 8px;
+}
+
 @media (max-width: 760px) {
   .tab-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .help-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
