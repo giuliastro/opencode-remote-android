@@ -3,6 +3,16 @@
 OpenCode Remote is a companion app that lets you control your OpenCode server from phone or desktop, even when you are not at your main workstation.
 It is designed to make daily usage simple: connect to your server, check active sessions, see progress, send new prompts or slash commands, and stop a running action when needed.
 
+## Screenshots
+
+| Settings | Sessions |
+|---|---|
+| ![](docs/screenshots/Screenshot_2026-02-08-11-51-42-238_ai.opencode.remote.web.jpg) | ![](docs/screenshots/Screenshot_2026-02-08-11-51-48-784_ai.opencode.remote.web.jpg) |
+
+| Session Detail | Help |
+|---|---|
+| ![](docs/screenshots/Screenshot_2026-02-08-11-51-52-139_ai.opencode.remote.web.jpg) | ![](docs/screenshots/Screenshot_2026-02-08-11-51-54-844_ai.opencode.remote.web.jpg) |
+
 ## What It Can Do
 
 - configure and test connection to your OpenCode server
