@@ -61,8 +61,40 @@ jobs:
         run: ./gradlew assembleDebug --stacktrace --no-daemon
         working-directory: web/android
 
+      - name: Build release APK (unsigned)
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+        working-directory: web/android
+
+      - name: Decode Android release keystore
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        run: |
+          echo "${{ secrets.ANDROID_KEYSTORE_BASE64 }}" | base64 --decode > web/android/release.keystore
+
+      - name: Sign release APK
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        run: |
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign \
+            --ks web/android/release.keystore \
+            --ks-pass pass:"${{ secrets.ANDROID_KEYSTORE_PASSWORD }}" \
+            --ks-key-alias "${{ secrets.ANDROID_KEY_ALIAS }}" \
+            --key-pass pass:"${{ secrets.ANDROID_KEY_PASSWORD }}" \
+            --out web/android/app/build/outputs/apk/release/app-release-signed.apk \
+            web/android/app/build/outputs/apk/release/app-release-unsigned.apk
+
+      - name: Verify release APK signature
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        run: |
+          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose web/android/app/build/outputs/apk/release/app-release-signed.apk
+
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: opencode-remote-debug-apk
           path: web/android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Upload release APK artifact
+        if: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' && secrets.ANDROID_KEYSTORE_PASSWORD != '' && secrets.ANDROID_KEY_ALIAS != '' && secrets.ANDROID_KEY_PASSWORD != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: opencode-remote-release-apk
+          path: web/android/app/build/outputs/apk/release/app-release-signed.apk

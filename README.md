@@ -87,6 +87,15 @@ Open the shown URL from your browser (or your phone on the same LAN).
 3. Download artifact `opencode-remote-debug-apk`.
 4. Install `app-debug.apk` on Android.
 
+To also generate a signed release APK (`app-release-signed.apk`), configure these GitHub repository secrets:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+When all four secrets are present, the workflow publishes an additional artifact: `opencode-remote-release-apk`.
+
 The workflow does this automatically:
 
 - builds the React app
