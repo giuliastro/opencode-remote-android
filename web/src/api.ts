@@ -28,13 +28,21 @@ function withDirectory(path: string, directory?: string): string {
 }
 
 async function request<T>(config: ServerConfig, path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${baseUrl(config)}${path}`, {
-    ...init,
-    headers: {
-      Authorization: authHeader(config),
-      ...(init?.headers ?? {})
-    }
-  })
+  const target = `${baseUrl(config)}${path}`
+  let response: Response
+  try {
+    response = await fetch(target, {
+      ...init,
+      headers: {
+        Authorization: authHeader(config),
+        ...(init?.headers ?? {})
+      }
+    })
+  } catch {
+    throw new Error(
+      `Network error: cannot reach ${target}. Check server hostname/port, Windows firewall, and CORS (--cors).`
+    )
+  }
 
   if (!response.ok) {
     let detail = `HTTP ${response.status}`

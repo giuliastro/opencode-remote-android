@@ -44,6 +44,14 @@ npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096 --cors http://localhost:
 
 If you open the web UI from another host/IP, add corresponding `--cors` origins.
 
+For Android APK (Capacitor WebView), include `http://localhost` as allowed origin too:
+
+```powershell
+npx -y opencode-ai serve --hostname 0.0.0.0 --port 4096 --cors http://localhost --cors http://localhost:5173 --cors http://<YOUR_PC_IP>:5173
+```
+
+If mobile still cannot connect, allow TCP 4096 through Windows Firewall.
+
 ## Android APK Build (Cloud, no local SDK required)
 
 1. Push to `main` or run workflow manually.
