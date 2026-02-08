@@ -5,13 +5,9 @@ It is designed to make daily usage simple: connect to your server, check active 
 
 ## Screenshots
 
-| Settings | Sessions |
+| Screenshot 1 | Screenshot 2 |
 |---|---|
-| ![](docs/screenshots/Screenshot_2026-02-08-11-51-42-238_ai.opencode.remote.web.jpg) | ![](docs/screenshots/Screenshot_2026-02-08-11-51-48-784_ai.opencode.remote.web.jpg) |
-
-| Session Detail | Help |
-|---|---|
-| ![](docs/screenshots/Screenshot_2026-02-08-11-51-52-139_ai.opencode.remote.web.jpg) | ![](docs/screenshots/Screenshot_2026-02-08-11-51-54-844_ai.opencode.remote.web.jpg) |
+| ![](docs/screenshots/1000046910.jpg) | ![](docs/screenshots/1000046911.jpg) |
 
 ## What It Can Do
 
