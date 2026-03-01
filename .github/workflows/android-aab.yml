@@ -87,13 +87,13 @@ jobs:
       - name: Sign release AAB
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         run: |
-          java -jar "$ANDROID_HOME/build-tools/34.0.0/lib/apksigner.jar" sign \
-            --ks web/android/release.keystore \
-            --ks-pass pass:"$ANDROID_KEYSTORE_PASSWORD" \
-            --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --key-pass pass:"$ANDROID_KEY_PASSWORD" \
-            --out web/android/app/build/outputs/bundle/release/app-release-signed.aab \
-            web/android/app/build/outputs/bundle/release/app-release.aab
+          jarsigner \
+            -keystore web/android/release.keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -keypass "$ANDROID_KEY_PASSWORD" \
+            -signedjar web/android/app/build/outputs/bundle/release/app-release-signed.aab \
+            web/android/app/build/outputs/bundle/release/app-release.aab \
+            "$ANDROID_KEY_ALIAS"
 
       - name: Select AAB path
         id: aab
