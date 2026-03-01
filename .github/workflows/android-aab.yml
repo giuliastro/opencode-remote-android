@@ -43,8 +43,8 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android 34 SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+      - name: Install Android 35 SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses
@@ -63,6 +63,12 @@ jobs:
       - name: Sync Capacitor project
         run: npx cap sync android
         working-directory: web
+
+      - name: Patch Android SDK version and enable R8
+        run: |
+          sed -i 's/compileSdkVersion = .*/compileSdkVersion = 35/' web/android/variables.gradle
+          sed -i 's/targetSdkVersion = .*/targetSdkVersion = 35/' web/android/variables.gradle
+          sed -i 's/minifyEnabled false/minifyEnabled true/' web/android/app/build.gradle
 
       - name: Read app version
         id: version
