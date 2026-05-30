@@ -82,6 +82,7 @@ jobs:
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
         run: |
+          go get -tool golang.org/x/mobile/cmd/gobind
           gomobile bind \
             -target android \
             -androidapi 26 \
