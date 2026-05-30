@@ -4,13 +4,13 @@ on:
   workflow_dispatch:
     inputs:
       tailscale_ref:
-        description: 'Tailscale git ref — leave blank for latest stable release tag'
+        description: 'tailscale-android git ref — leave blank for latest stable release tag'
         required: false
         default: ''
   workflow_call:
     inputs:
       tailscale_ref:
-        description: 'Tailscale git ref — leave blank for latest stable release tag'
+        description: 'tailscale-android git ref — leave blank for latest stable release tag'
         type: string
         required: false
         default: ''
@@ -44,18 +44,24 @@ jobs:
       - name: Install Android NDK
         run: sdkmanager "ndk;25.2.9519653"
 
-      - name: Resolve Tailscale ref
+      - name: Resolve tailscale-android ref
         id: resolve
         run: |
           INPUT_REF="${{ inputs.tailscale_ref }}"
           if [ -z "$INPUT_REF" ]; then
-            LATEST=$(curl -fsSL https://api.github.com/repos/tailscale/tailscale/releases/latest | jq -r .tag_name)
+            LATEST=$(curl -fsSL https://api.github.com/repos/tailscale/tailscale-android/releases/latest | jq -r .tag_name)
             echo "ref=$LATEST" >> "$GITHUB_OUTPUT"
             echo "Resolved latest stable tag: $LATEST"
           else
             echo "ref=$INPUT_REF" >> "$GITHUB_OUTPUT"
             echo "Using provided ref: $INPUT_REF"
           fi
+
+      - name: Clone tailscale-android
+        run: |
+          git clone --depth 1 \
+            --branch "${{ steps.resolve.outputs.ref }}" \
+            https://github.com/tailscale/tailscale-android ts
 
       - name: Cache Go modules
         uses: actions/cache@v4
@@ -66,28 +72,31 @@ jobs:
           key: go-libtailscale-${{ steps.resolve.outputs.ref }}
           restore-keys: go-libtailscale-
 
-      - name: Install gomobile
+      # Install gomobile/gobind at the version pinned in tailscale-android's go.mod
+      - name: Install gomobile and gobind
+        working-directory: ts
         run: |
-          go install golang.org/x/mobile/cmd/gomobile@latest
+          go install golang.org/x/mobile/cmd/gobind
+          go install golang.org/x/mobile/cmd/gomobile
           gomobile init
-
-      - name: Clone Tailscale
-        run: |
-          git clone --depth 1 \
-            --branch "${{ steps.resolve.outputs.ref }}" \
-            https://github.com/tailscale/tailscale ts
 
       - name: Build AAR
         working-directory: ts
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
+          # Setting TOOLCHAIN_DIR tells build-tags.sh we're using stock Go (not tailscale-go),
+          # which outputs the "not_tailscale_go" build tag instead of "tailscale_go".
+          TOOLCHAIN_DIR: ${{ env.GOROOT }}
         run: |
-          go get -tool golang.org/x/mobile/cmd/gobind
+          mkdir -p android/libs
+          BUILD_TAGS="$(./build-tags.sh) ts_omit_cachenetmap"
           gomobile bind \
             -target android \
             -androidapi 26 \
-            -o ../libtailscale.aar \
-            tailscale.com/libtailscale
+            -tags "$BUILD_TAGS" \
+            -ldflags "-linkmode=external -extldflags=-Wl,-z,max-page-size=16384" \
+            -o android/libs/libtailscale.aar \
+            ./libtailscale
 
       - name: Set artifact name
         id: meta
@@ -99,7 +108,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.meta.outputs.artifact_name }}
-          path: |
-            libtailscale.aar
-            libtailscale-sources.jar
+          path: ts/android/libs/libtailscale.aar
           if-no-files-found: error
