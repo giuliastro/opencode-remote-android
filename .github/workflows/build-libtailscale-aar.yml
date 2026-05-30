@@ -26,10 +26,10 @@ jobs:
       artifact_name: ${{ steps.meta.outputs.artifact_name }}
 
     steps:
-      - name: Setup Go 1.22
+      - name: Setup Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
+          go-version: 'stable'
           cache: false
 
       - name: Setup JDK 17
