@@ -1302,6 +1302,7 @@ function App() {
                         title="Cycle model variant"
                       >
                         {currentVariant ?? "auto"}
+                        <span className="meta-agent-cycle">↻</span>
                       </button>
                     )}
                   </div>
