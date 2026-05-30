@@ -689,7 +689,7 @@ button:disabled {
   flex-wrap: wrap;
 }
 
-.meta-model {
+.meta-variantl {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--secondary-200);
@@ -705,11 +705,11 @@ button:disabled {
   margin: 0 1px;
 }
 
-.meta-modelid {
+.meta-variantlid {
   color: var(--secondary-100);
 }
 
-.meta-mode {
+.meta-variant {
   font-size: 0.68rem;
   font-family: var(--font-mono);
   color: var(--primary-400);
@@ -3239,15 +3239,15 @@ input:focus, textarea:focus {
   color: var(--secondary-800);
 }
 
-[data-theme="light"] .meta-model .meta-provider {
+[data-theme="light"] .meta-variantl .meta-provider {
   color: var(--secondary-500);
 }
 
-[data-theme="light"] .meta-model .meta-modelid {
+[data-theme="light"] .meta-variantl .meta-variantlid {
   color: var(--secondary-800);
 }
 
-[data-theme="light"] .meta-mode {
+[data-theme="light"] .meta-variant {
   color: var(--primary-600);
   background: rgba(14, 165, 233, 0.08);
   border-color: rgba(14, 165, 233, 0.2);

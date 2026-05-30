@@ -460,7 +460,7 @@ function App() {
     return {
       agent: currentAgent ?? lastUser?.info?.agent ?? null,
       model: lastUser?.info?.model ?? lastAssistant?.info?.model ?? null,
-      mode: lastAssistant?.info?.mode ?? null
+      variant: lastAssistant?.info?.variant ?? null
     }
   }, [messages, currentAgent])
 
@@ -1234,9 +1234,9 @@ function App() {
           )}
 
           <div className="composer">
-            {selectedSession && (sessionInfo.model || sessionInfo.mode || sessionInfo.agent) && (
+            {selectedSession && (sessionInfo.model || sessionInfo.variant || sessionInfo.agent) && (
               <div className="session-meta">
-                {(sessionInfo.model || sessionInfo.mode) && (
+                {(sessionInfo.model || sessionInfo.variant) && (
                   <div className="session-meta-model-row">
                     {sessionInfo.model && (
                       <span className="meta-model">
@@ -1245,8 +1245,8 @@ function App() {
                         <span className="meta-modelid">{sessionInfo.model.modelID}</span>
                       </span>
                     )}
-                    {sessionInfo.mode && (
-                      <span className="meta-mode">{sessionInfo.mode}</span>
+                    {sessionInfo.variant && (
+                      <span className="meta-variant">{sessionInfo.variant}</span>
                     )}
                   </div>
                 )}

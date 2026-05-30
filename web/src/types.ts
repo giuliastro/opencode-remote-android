@@ -71,7 +71,7 @@ export type MessageEnvelope = {
     role: string
     sessionID: string
     agent?: string
-    mode?: string
+    variant?: string
     model?: {
       providerID: string
       modelID: string
