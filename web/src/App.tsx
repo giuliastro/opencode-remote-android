@@ -566,7 +566,6 @@ function App() {
 
   async function createSession() {
     const folder = newSessionFolder.trim()
-    if (!folder) return
     try {
       const created = await api.createSession(config, "Mobile session", folder)
       setNewSessionFolder("")
@@ -1021,12 +1020,12 @@ function App() {
           
           <div className="new-session-row">
             <input
-              placeholder="Enter folder path for new session (e.g., /path/to/project)"
+              placeholder="Folder path (leave empty for current directory)"
               value={newSessionFolder}
               onChange={(event) => setNewSessionFolder(event.target.value)}
               className="new-session-input"
             />
-            <button onClick={createSession} className="btn-primary" disabled={!newSessionFolder.trim()}>
+            <button onClick={createSession} className="btn-primary">
               <PlusIcon size={18} />
               New Session
             </button>
