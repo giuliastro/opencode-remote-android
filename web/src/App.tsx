@@ -16,7 +16,8 @@ import {
   RocketIcon,
   MenuIcon,
   SunIcon,
-  MoonIcon
+  MoonIcon,
+  FilterIcon
 } from "./Icons"
 
 const STORAGE_KEY = "opencode.remote.server"
@@ -115,6 +116,7 @@ function App() {
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [todosExpanded, setTodosExpanded] = useState(false)
   const [query, setQuery] = useState("")
+  const [hideSubagents, setHideSubagents] = useState(false)
   const [composer, setComposer] = useState("")
   const [busySending, setBusySending] = useState(false)
   const [loadingSessionID, setLoadingSessionID] = useState<string | null>(null)
@@ -131,12 +133,14 @@ function App() {
   )
 
   const filteredSessions = useMemo(() => {
-    const text = query.trim().toLowerCase()
-    if (!text) return sessions
+    const isSubagent = (title: string) => /\(@\S+ subagent\)$/i.test(title)
     return sessions.filter((session) => {
+      if (hideSubagents && isSubagent(session.title)) return false
+      const text = query.trim().toLowerCase()
+      if (!text) return true
       return session.title.toLowerCase().includes(text) || session.directory.toLowerCase().includes(text)
     })
-  }, [sessions, query])
+  }, [sessions, query, hideSubagents])
 
   const renderedMessages = useMemo(() => {
     return messages
@@ -577,6 +581,14 @@ function App() {
           <div className="header-row">
             <h2>Sessions</h2>
             <div className="inline-actions">
+              <button
+                onClick={() => setHideSubagents(!hideSubagents)}
+                className={hideSubagents ? "btn-primary" : "btn-secondary"}
+                title={hideSubagents ? "Showing main sessions only" : "Showing all sessions"}
+              >
+                <FilterIcon size={18} />
+                {hideSubagents ? "Subagents hidden" : "Subagents"}
+              </button>
               <button onClick={createSession} className="btn-primary">
                 <PlusIcon size={18} />
                 New Session
