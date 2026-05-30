@@ -86,11 +86,11 @@ jobs:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/25.2.9519653
         run: |
           mkdir -p android/libs
-          # TOOLCHAIN_DIR must be non-empty to tell build-tags.sh we're using stock Go,
-          # which makes it output "not_tailscale_go" instead of "tailscale_go".
-          # "tailscale_go" pulls in code that calls runtime.TailscaleCurrentP, a symbol
-          # that only exists in Tailscale's patched Go fork.
-          TOOLCHAIN_DIR=$(go env GOROOT) BUILD_TAGS="$(./build-tags.sh) ts_omit_cachenetmap"
+          # TOOLCHAIN_DIR must be non-empty so build-tags.sh outputs "not_tailscale_go"
+          # instead of "tailscale_go". The "tailscale_go" tag pulls in code that uses
+          # runtime.TailscaleCurrentP, a symbol only in Tailscale's patched Go fork.
+          export TOOLCHAIN_DIR=$(go env GOROOT)
+          BUILD_TAGS="$(./build-tags.sh) ts_omit_cachenetmap"
           gomobile bind \
             -target android \
             -androidapi 26 \
