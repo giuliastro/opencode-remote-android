@@ -689,7 +689,7 @@ button:disabled {
   flex-wrap: wrap;
 }
 
-.meta-variantl {
+.meta-model {
   font-family: var(--font-mono);
   font-size: 0.72rem;
   color: var(--secondary-200);
@@ -705,19 +705,34 @@ button:disabled {
   margin: 0 1px;
 }
 
-.meta-variantlid {
+.meta-modelid {
   color: var(--secondary-100);
 }
 
 .meta-variant {
   font-size: 0.68rem;
   font-family: var(--font-mono);
-  color: var(--primary-400);
-  background: rgba(14, 165, 233, 0.12);
-  border: 1px solid rgba(14, 165, 233, 0.25);
+  color: var(--secondary-400);
+  background: transparent;
+  border: 1px solid var(--secondary-700);
   border-radius: var(--radius-sm);
   padding: 1px 6px;
   white-space: nowrap;
+  cursor: pointer;
+  min-height: unset;
+  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.meta-variant:hover {
+  color: var(--primary-400);
+  border-color: rgba(14, 165, 233, 0.4);
+  background: rgba(14, 165, 233, 0.08);
+}
+
+.meta-variant.active {
+  color: var(--primary-300);
+  background: rgba(14, 165, 233, 0.15);
+  border-color: rgba(14, 165, 233, 0.4);
 }
 
 .session-meta-agent {
@@ -3239,18 +3254,24 @@ input:focus, textarea:focus {
   color: var(--secondary-800);
 }
 
-[data-theme="light"] .meta-variantl .meta-provider {
+[data-theme="light"] .meta-model .meta-provider {
   color: var(--secondary-500);
 }
 
-[data-theme="light"] .meta-variantl .meta-variantlid {
+[data-theme="light"] .meta-model .meta-modelid {
   color: var(--secondary-800);
 }
 
 [data-theme="light"] .meta-variant {
+  color: var(--secondary-500);
+  border-color: var(--secondary-300);
+}
+
+[data-theme="light"] .meta-variant:hover,
+[data-theme="light"] .meta-variant.active {
   color: var(--primary-600);
   background: rgba(14, 165, 233, 0.08);
-  border-color: rgba(14, 165, 233, 0.2);
+  border-color: rgba(14, 165, 233, 0.3);
 }
 
 [data-theme="light"] .session-meta-agent {

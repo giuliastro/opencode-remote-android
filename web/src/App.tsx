@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { App as CapApp } from "@capacitor/app"
 import { api } from "./api"
-import type { AgentInfo, CommandInfo, MessageEnvelope, ServerConfig, SessionView, TodoItem } from "./types"
+import type { AgentInfo, CommandInfo, MessageEnvelope, ProviderInfo, ServerConfig, SessionView, TodoItem } from "./types"
 import {
   SettingsIcon,
   FolderIcon,
@@ -364,6 +364,8 @@ function App() {
   const [commands, setCommands] = useState<CommandInfo[]>([])
   const [agents, setAgents] = useState<AgentInfo[]>([])
   const [currentAgent, setCurrentAgent] = useState<string | null>(null)
+  const [providers, setProviders] = useState<ProviderInfo[]>([])
+  const [currentVariant, setCurrentVariant] = useState<string | null>(null)
   const [helpPage, setHelpPage] = useState<"overview" | "server" | "network" | "troubleshooting" | "commands">(
     "overview"
   )
@@ -467,6 +469,14 @@ function App() {
     }
   }, [messages, currentAgent])
 
+  const availableVariants = useMemo(() => {
+    const model = sessionInfo.model
+    if (!model || providers.length === 0) return []
+    const provider = providers.find((p) => p.id === model.providerID)
+    const modelInfo = provider?.models[model.modelID]
+    return modelInfo?.variants ? Object.keys(modelInfo.variants) : []
+  }, [sessionInfo.model, providers])
+
   async function openSession(sessionID: string, directory: string) {
     setSelectedID(sessionID)
     setMessages([])
@@ -549,6 +559,16 @@ function App() {
     }
   }
 
+  async function loadProviders() {
+    if (!config.host || !config.password) return
+    try {
+      const resp = await api.listProviders(config)
+      setProviders(resp.all)
+    } catch {
+      setProviders([])
+    }
+  }
+
   async function loadSelected(sessionID: string, directory: string) {
     setRuntimeError(null)
     try {
@@ -598,13 +618,13 @@ function App() {
         const command = normalized.split(" ")[0]?.trim()
         const args = normalized.slice(command.length).trim()
         if (!command) return
-        const reply = await api.sendCommand(config, selectedSession.id, command, args, selectedSession.directory, currentAgent ?? undefined)
+        const reply = await api.sendCommand(config, selectedSession.id, command, args, selectedSession.directory, currentAgent ?? undefined, currentVariant ?? undefined)
         if (reply && reply.info) {
           if (reply.info.agent) setCurrentAgent(reply.info.agent)
           setMessages((prev) => [...prev, reply])
         }
       } else {
-        const reply = await api.sendPrompt(config, selectedSession.id, text, selectedSession.directory, currentAgent ?? undefined)
+        const reply = await api.sendPrompt(config, selectedSession.id, text, selectedSession.directory, currentAgent ?? undefined, currentVariant ?? undefined)
         if (reply && reply.info && reply.info.agent) {
           setCurrentAgent(reply.info.agent)
         }
@@ -632,6 +652,20 @@ function App() {
     const idx = agents.findIndex((a) => a.name === current)
     const next = agents[(idx + 1) % agents.length]
     setCurrentAgent(next.name)
+  }
+
+  function cycleVariant() {
+    if (availableVariants.length === 0) return
+    if (!currentVariant) {
+      setCurrentVariant(availableVariants[0])
+      return
+    }
+    const idx = availableVariants.indexOf(currentVariant)
+    if (idx === -1 || idx === availableVariants.length - 1) {
+      setCurrentVariant(null)
+    } else {
+      setCurrentVariant(availableVariants[idx + 1])
+    }
   }
 
   async function deleteSession(sessionID: string) {
@@ -665,6 +699,7 @@ function App() {
     refreshSessions(true).catch(() => undefined)
     loadCommands().catch(() => undefined)
     loadAgents().catch(() => undefined)
+    loadProviders().catch(() => undefined)
     const timer = setInterval(() => {
       refreshSessions(true).catch(() => undefined)
       if (selectedSession) {
@@ -1248,8 +1283,15 @@ function App() {
                         <span className="meta-modelid">{sessionInfo.model.modelID}</span>
                       </span>
                     )}
-                    {sessionInfo.variant && (
-                      <span className="meta-variant">{sessionInfo.variant}</span>
+                    {availableVariants.length > 0 && (
+                      <button
+                        type="button"
+                        className={`meta-variant${currentVariant ? " active" : ""}`}
+                        onClick={cycleVariant}
+                        title="Cycle model variant"
+                      >
+                        {currentVariant ?? "auto"}
+                      </button>
                     )}
                   </div>
                 )}

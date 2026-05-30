@@ -5,6 +5,7 @@ import type {
   DiffFile,
   HealthResponse,
   MessageEnvelope,
+  ProviderResponse,
   ServerConfig,
   Session,
   SessionStatus,
@@ -125,6 +126,10 @@ export const api = {
     return request<AgentInfo[]>(config, "/agent")
   },
 
+  listProviders(config: ServerConfig) {
+    return request<ProviderResponse>(config, "/provider")
+  },
+
   createSession(config: ServerConfig, title?: string, directory?: string) {
     const path = withDirectory("/session", directory)
     return request<Session>(config, path, { method: "POST", body: { title } })
@@ -150,18 +155,20 @@ export const api = {
     return request<DiffFile[]>(config, `/session/${sessionID}/diff`)
   },
 
-  sendPrompt(config: ServerConfig, sessionID: string, text: string, directory?: string, agent?: string) {
+  sendPrompt(config: ServerConfig, sessionID: string, text: string, directory?: string, agent?: string, variant?: string) {
     const body: Record<string, unknown> = { parts: [{ type: "text", text }] }
     if (agent) body.agent = agent
+    if (variant) body.variant = variant
     return request<MessageEnvelope>(config, withDirectory(`/session/${sessionID}/message`, directory), {
       method: "POST",
       body
     })
   },
 
-  sendCommand(config: ServerConfig, sessionID: string, command: string, argumentsText: string, directory?: string, agent?: string) {
+  sendCommand(config: ServerConfig, sessionID: string, command: string, argumentsText: string, directory?: string, agent?: string, variant?: string) {
     const body: Record<string, unknown> = { command, arguments: argumentsText }
     if (agent) body.agent = agent
+    if (variant) body.variant = variant
     return request<MessageEnvelope>(config, withDirectory(`/session/${sessionID}/command`, directory), {
       method: "POST",
       body

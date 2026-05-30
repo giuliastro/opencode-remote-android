@@ -172,3 +172,21 @@ export type AgentInfo = {
     providerID: string
   }
 }
+
+export type ModelInfo = {
+  id: string
+  name: string
+  variants?: Record<string, unknown>
+}
+
+export type ProviderInfo = {
+  id: string
+  name: string
+  models: Record<string, ModelInfo>
+}
+
+export type ProviderResponse = {
+  all: ProviderInfo[]
+  default: Record<string, string>
+  connected: string[]
+}
