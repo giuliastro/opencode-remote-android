@@ -447,7 +447,7 @@ function App() {
   const filteredCommands = useMemo(() => {
     if (!slashOpen) return []
     const filter = slashFilter.toLowerCase()
-    return commands.filter((cmd) => cmd.name.toLowerCase().startsWith(filter))
+    return commands.filter((cmd) => cmd.name.toLowerCase().includes(filter))
   }, [commands, slashFilter, slashOpen])
 
   const hasConfiguredServer = Boolean(config.host && config.port > 0)
