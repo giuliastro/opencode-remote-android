@@ -457,10 +457,13 @@ function App() {
   const sessionInfo = useMemo(() => {
     const lastUser = [...messages].reverse().find((m) => m.info.role === "user")
     const lastAssistant = [...messages].reverse().find((m) => m.info.role === "assistant")
+    const assistantModel = lastAssistant?.info?.modelID
+      ? { providerID: lastAssistant.info.providerID ?? "", modelID: lastAssistant.info.modelID }
+      : null
     return {
       agent: currentAgent ?? lastUser?.info?.agent ?? null,
-      model: lastUser?.info?.model ?? lastAssistant?.info?.model ?? null,
-      variant: lastAssistant?.info?.variant ?? null
+      model: lastUser?.info?.model ?? assistantModel ?? null,
+      variant: lastAssistant?.info?.mode ?? null
     }
   }, [messages, currentAgent])
 

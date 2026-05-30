@@ -71,11 +71,15 @@ export type MessageEnvelope = {
     role: string
     sessionID: string
     agent?: string
-    variant?: string
+    mode?: string
+    // user message: model nested
     model?: {
       providerID: string
       modelID: string
     }
+    // assistant message: model flat
+    providerID?: string
+    modelID?: string
     time: {
       created: number
       completed?: number
