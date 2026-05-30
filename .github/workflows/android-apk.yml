@@ -96,10 +96,10 @@ jobs:
         if: ${{ inputs.with_tailscale }}
         run: |
           BUILDGRADLE="web/android/app/build.gradle"
+          VARIABLES="web/android/variables.gradle"
 
-          # Set minSdk to 26 (required by libtailscale)
-          sed -i 's/minSdkVersion [0-9]*/minSdkVersion 26/g' "$BUILDGRADLE"
-          sed -i 's/minSdk [0-9]*/minSdk 26/g' "$BUILDGRADLE"
+          # Set minSdk to 26 (required by libtailscale) — value lives in variables.gradle
+          sed -i 's/minSdkVersion = [0-9][0-9]*/minSdkVersion = 26/' "$VARIABLES"
 
           # Add libtailscale AAR dependency + kotlinx-coroutines
           python3 -c "import re; f='$BUILDGRADLE'; c=open(f).read(); c=re.sub(r'(dependencies\s*\{)', r'\1\n    implementation fileTree(dir: \"libs\", include: [\"*.aar\", \"*.jar\"])\n    implementation \"org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3\"', c); open(f,'w').write(c)"
