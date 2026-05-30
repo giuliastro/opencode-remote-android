@@ -451,7 +451,7 @@ function App() {
 
   const hasConfiguredServer = Boolean(config.host && config.port > 0)
   const isSessionRunning = Boolean(selectedSession && ["busy", "retry"].includes(selectedSession.status))
-  const isWorking = busySending || isSessionRunning
+  const isWorking = isSessionRunning
 
   const sessionInfo = useMemo(() => {
     const lastUser = [...messages].reverse().find((m) => m.info.role === "user")
@@ -1313,33 +1313,34 @@ function App() {
                 }
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault()
-                  if (!isWorking) {
-                    send().catch(() => undefined)
-                  }
+                  send().catch(() => undefined)
                 }
               }}
               onBlur={() => {
                 setTimeout(() => setSlashOpen(false), 150)
               }}
-              disabled={!selectedSession || isWorking}
-            />
-            <button 
-              onClick={isWorking ? abortSession : send}
               disabled={!selectedSession}
-              className={isWorking ? "btn-danger" : "btn-primary"}
-            >
-              {isWorking ? (
-                <>
+            />
+            <div className="composer-buttons">
+              <button 
+                onClick={send}
+                disabled={!selectedSession}
+                className="btn-primary"
+              >
+                <RocketIcon size={18} />
+                Send
+              </button>
+              {isWorking && (
+                <button 
+                  onClick={abortSession}
+                  disabled={!selectedSession}
+                  className="btn-danger"
+                >
                   <StopIcon size={18} />
-                  Waiting...
-                </>
-              ) : (
-                <>
-                  <RocketIcon size={18} />
-                  Send
-                </>
+                  Cancel
+                </button>
               )}
-            </button>
+            </div>
           </div>
           
           {runtimeError && <div className="error fade-in">✗ {runtimeError}</div>}

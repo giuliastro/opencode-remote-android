@@ -1521,6 +1521,12 @@ button:disabled {
   position: relative;
 }
 
+.composer-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
 /* Slash Command Popover */
 .slash-popover {
   position: absolute;
