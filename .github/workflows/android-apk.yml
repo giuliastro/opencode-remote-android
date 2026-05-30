@@ -2,6 +2,15 @@ name: Build Android APK
 
 on:
   workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        required: true
+        default: 'debug'
+        type: choice
+        options:
+          - debug
+          - release
 
 permissions:
   contents: write
@@ -75,8 +84,8 @@ jobs:
       - name: Sync Android version metadata
         run: node web/scripts/sync-android-version.mjs "${{ steps.version.outputs.app_version }}" "${{ steps.version.outputs.version_code }}"
 
-      - name: Build release APK (unsigned)
-        run: ./gradlew assembleRelease --stacktrace --no-daemon
+      - name: Build APK
+        run: ./gradlew assemble${{ inputs.build_type == 'debug' && 'Debug' || 'Release' }} --stacktrace --no-daemon
         working-directory: web/android
 
       - name: Require signing secrets for tagged release
@@ -88,12 +97,12 @@ jobs:
           test -n "$ANDROID_KEY_PASSWORD" || (echo "Missing ANDROID_KEY_PASSWORD" && exit 1)
 
       - name: Decode Android release keystore
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
+        if: ${{ inputs.build_type == 'release' && env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > web/android/release.keystore
 
       - name: Sign release APK
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
+        if: ${{ inputs.build_type == 'release' && env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         run: |
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign \
             --ks web/android/release.keystore \
@@ -104,23 +113,25 @@ jobs:
             web/android/app/build/outputs/apk/release/app-release-unsigned.apk
 
       - name: Verify release APK signature
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
+        if: ${{ inputs.build_type == 'release' && env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         run: |
           "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose web/android/app/build/outputs/apk/release/app-release-signed.apk
 
-      - name: Select release APK path
+      - name: Select APK path
         id: apk
         run: |
-          if [ -f web/android/app/build/outputs/apk/release/app-release-signed.apk ]; then
+          if [ "${{ inputs.build_type }}" = "debug" ]; then
+            echo "path=web/android/app/build/outputs/apk/debug/app-debug.apk" >> "$GITHUB_OUTPUT"
+          elif [ -f web/android/app/build/outputs/apk/release/app-release-signed.apk ]; then
             echo "path=web/android/app/build/outputs/apk/release/app-release-signed.apk" >> "$GITHUB_OUTPUT"
           else
             echo "path=web/android/app/build/outputs/apk/release/app-release-unsigned.apk" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload release APK artifact
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: opencode-remote-release-apk-v${{ steps.version.outputs.app_version }}
+          name: opencode-remote-${{ inputs.build_type }}-apk-v${{ steps.version.outputs.app_version }}
           path: ${{ steps.apk.outputs.path }}
 
       - name: Publish GitHub release
