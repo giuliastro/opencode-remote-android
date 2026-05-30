@@ -32,6 +32,39 @@ export type SessionStatus = {
   next?: number
 }
 
+export type ToolStatePending = {
+  status: "pending"
+  input: Record<string, unknown>
+  raw: string
+}
+
+export type ToolStateRunning = {
+  status: "running"
+  input: Record<string, unknown>
+  title?: string
+  metadata?: Record<string, unknown>
+  time: { start: number }
+}
+
+export type ToolStateCompleted = {
+  status: "completed"
+  input: Record<string, unknown>
+  output: string
+  title: string
+  metadata: Record<string, unknown>
+  time: { start: number; end: number }
+}
+
+export type ToolStateError = {
+  status: "error"
+  input: Record<string, unknown>
+  error: string
+  metadata?: Record<string, unknown>
+  time: { start: number; end: number }
+}
+
+export type ToolState = ToolStatePending | ToolStateRunning | ToolStateCompleted | ToolStateError
+
 export type MessageEnvelope = {
   info: {
     id: string
@@ -46,6 +79,47 @@ export type MessageEnvelope = {
     id: string
     type: string
     text?: string
+    tool?: string
+    callID?: string
+    state?: ToolState
+    prompt?: string
+    description?: string
+    agent?: string
+    // ReasoningPart fields
+    // (uses text field from above)
+    // FilePart fields
+    mime?: string
+    filename?: string
+    url?: string
+    // StepStartPart fields
+    snapshot?: string
+    // StepFinishPart fields
+    reason?: string
+    cost?: number
+    tokens?: {
+      input: number
+      output: number
+      reasoning: number
+      cache: {
+        read: number
+        write: number
+      }
+    }
+    // PatchPart fields
+    hash?: string
+    files?: string[]
+    // AgentPart fields
+    name?: string
+    // RetryPart fields
+    attempt?: number
+    error?: {
+      name: string
+      data: {
+        message: string
+      }
+    }
+    // CompactionPart fields
+    auto?: boolean
   }>
 }
 
@@ -68,6 +142,7 @@ export type SessionView = {
   directory: string
   updated: number
   status: string
+  statusMessage?: string
   files: number
   additions: number
   deletions: number

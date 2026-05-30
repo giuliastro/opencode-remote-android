@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { App as CapApp } from "@capacitor/app"
 import { api } from "./api"
 import type { CommandInfo, MessageEnvelope, ServerConfig, SessionView, TodoItem } from "./types"
 import {
@@ -7,7 +8,6 @@ import {
   ChatIcon,
   HelpIcon,
   PlusIcon,
-  PlayIcon,
   TrashIcon,
   StopIcon,
   SaveIcon,
@@ -16,8 +16,7 @@ import {
   RocketIcon,
   MenuIcon,
   SunIcon,
-  MoonIcon,
-  FilterIcon
+  MoonIcon
 } from "./Icons"
 
 const STORAGE_KEY = "opencode.remote.server"
@@ -41,6 +40,50 @@ function extractText(msg: MessageEnvelope): string {
     .map((part) => part.text)
     .join("\n")
     .trim()
+}
+
+function extractToolParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "tool" && part.tool && part.state)
+}
+
+function extractSubtaskParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "subtask" && part.prompt)
+}
+
+function extractReasoningParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "reasoning" && part.text)
+}
+
+function extractFileParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "file" && part.url)
+}
+
+function extractStepStartParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "step-start")
+}
+
+function extractStepFinishParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "step-finish")
+}
+
+function extractSnapshotParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "snapshot" && part.snapshot)
+}
+
+function extractPatchParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "patch" && part.hash)
+}
+
+function extractAgentParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "agent" && part.name)
+}
+
+function extractRetryParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "retry")
+}
+
+function extractCompactionParts(msg: MessageEnvelope) {
+  return msg.parts.filter((part) => part.type === "compaction")
 }
 
 function renderInline(text: string) {
@@ -83,6 +126,225 @@ function toDisplayLines(text: string): string[] {
     .filter((line, idx, arr) => line.length > 0 || (idx > 0 && arr[idx - 1].length > 0))
 }
 
+function formatToolParams(input: Record<string, unknown>): string {
+  try {
+    const entries = Object.entries(input).filter(([, v]) => v !== undefined && v !== null)
+    if (entries.length === 0) return ""
+    return entries
+      .map(([key, value]) => {
+        const val = typeof value === "string" ? value : JSON.stringify(value)
+        return `${key}: ${val}`
+      })
+      .join("\n")
+  } catch {
+    return JSON.stringify(input, null, 2)
+  }
+}
+
+function ToolPartDisplay({ part }: { part: { tool: string; state: NonNullable<MessageEnvelope["parts"][0]["state"]> } }) {
+  const [expanded, setExpanded] = useState(false)
+  const state = part.state
+  if (!state) return null
+
+  const statusIcon = state.status === "completed" ? "✓" : state.status === "error" ? "✗" : state.status === "running" ? "⟳" : "○"
+  const statusClass = state.status
+  const params = formatToolParams(state.input)
+  const hasOutput = state.status === "completed" || state.status === "error"
+  const output = state.status === "completed" ? state.output : state.status === "error" ? state.error : ""
+
+  return (
+    <div className={`tool-part ${statusClass}`}>
+      <div className="tool-header" onClick={() => hasOutput && setExpanded(!expanded)}>
+        <span className={`tool-status ${statusClass}`}>{statusIcon}</span>
+        <span className="tool-name">{part.tool}</span>
+        {state.title && <span className="tool-title">{state.title}</span>}
+        {hasOutput && (
+          <button className="tool-toggle" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}>
+            {expanded ? "▲" : "▼"}
+          </button>
+        )}
+      </div>
+      {params && (
+        <div className="tool-params">
+          <pre>{params}</pre>
+        </div>
+      )}
+      {expanded && output && (
+        <div className="tool-output">
+          <pre>{output}</pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SubtaskPartDisplay({ part }: { part: { prompt: string; description?: string; agent?: string } }) {
+  const [expanded, setExpanded] = useState(false)
+  const hasDescription = Boolean(part.description)
+  const hasAgent = Boolean(part.agent)
+
+  return (
+    <div className="subtask-part">
+      <div className="subtask-header" onClick={() => setExpanded(!expanded)}>
+        <span className="subtask-icon">📋</span>
+        <span className="subtask-label">Subtask</span>
+        {hasAgent && <span className="subtask-agent">{part.agent}</span>}
+        <button className="subtask-toggle" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}>
+          {expanded ? "▲" : "▼"}
+        </button>
+      </div>
+      {expanded && (
+        <div className="subtask-content">
+          {hasDescription && (
+            <div className="subtask-description">
+              <strong>Description:</strong>
+              <p>{part.description}</p>
+            </div>
+          )}
+          <div className="subtask-prompt">
+            <strong>Prompt:</strong>
+            <pre>{part.prompt}</pre>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function ReasoningPartDisplay({ part }: { part: { text: string } }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="reasoning-part">
+      <div className="reasoning-header" onClick={() => setExpanded(!expanded)}>
+        <span className="reasoning-icon">💭</span>
+        <span className="reasoning-label">Thinking</span>
+        <button className="reasoning-toggle" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}>
+          {expanded ? "▲" : "▼"}
+        </button>
+      </div>
+      {expanded && (
+        <div className="reasoning-content">
+          <pre>{part.text}</pre>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function FilePartDisplay({ part }: { part: { mime: string; filename?: string; url: string } }) {
+  const isImage = part.mime.startsWith("image/")
+
+  return (
+    <div className="file-part">
+      <div className="file-header">
+        <span className="file-icon">{isImage ? "🖼️" : "📄"}</span>
+        <span className="file-name">{part.filename || "Attachment"}</span>
+        <span className="file-mime">{part.mime}</span>
+      </div>
+      {isImage && (
+        <div className="file-preview">
+          <img src={part.url} alt={part.filename || "Attachment"} />
+        </div>
+      )}
+    </div>
+  )
+}
+
+function StepStartPartDisplay() {
+  return (
+    <div className="step-part step-start">
+      <span className="step-icon">▶️</span>
+      <span className="step-label">Step started</span>
+    </div>
+  )
+}
+
+function StepFinishPartDisplay({ part }: { part: { reason: string; cost?: number; tokens?: { input: number; output: number; reasoning: number } } }) {
+  return (
+    <div className="step-part step-finish">
+      <div className="step-header">
+        <span className="step-icon">⏹️</span>
+        <span className="step-label">Step finished</span>
+        <span className="step-reason">{part.reason}</span>
+      </div>
+      {(part.cost !== undefined || part.tokens) && (
+        <div className="step-stats">
+          {part.cost !== undefined && <span className="step-cost">Cost: ${part.cost.toFixed(4)}</span>}
+          {part.tokens && (
+            <span className="step-tokens">
+              Tokens: {part.tokens.input + part.tokens.output + part.tokens.reasoning}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function PatchPartDisplay({ part }: { part: { hash: string; files: string[] } }) {
+  const [expanded, setExpanded] = useState(false)
+
+  return (
+    <div className="patch-part">
+      <div className="patch-header" onClick={() => setExpanded(!expanded)}>
+        <span className="patch-icon">🩹</span>
+        <span className="patch-label">Patch</span>
+        <span className="patch-files">{part.files.length} file(s)</span>
+        <button className="patch-toggle" onClick={(e) => { e.stopPropagation(); setExpanded(!expanded) }}>
+          {expanded ? "▲" : "▼"}
+        </button>
+      </div>
+      {expanded && (
+        <div className="patch-content">
+          <div className="patch-hash">Hash: <code>{part.hash}</code></div>
+          <ul className="patch-file-list">
+            {part.files.map((file, index) => (
+              <li key={index}>{file}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function AgentPartDisplay({ part }: { part: { name: string } }) {
+  return (
+    <div className="agent-part">
+      <span className="agent-icon">🤖</span>
+      <span className="agent-label">Agent</span>
+      <span className="agent-name">{part.name}</span>
+    </div>
+  )
+}
+
+function RetryPartDisplay({ part }: { part: { attempt: number; error?: { name: string; data: { message: string } } } }) {
+  return (
+    <div className="retry-part">
+      <div className="retry-header">
+        <span className="retry-icon">🔄</span>
+        <span className="retry-label">Retry #{part.attempt}</span>
+      </div>
+      {part.error && (
+        <div className="retry-error">
+          <strong>{part.error.name}:</strong> {part.error.data.message}
+        </div>
+      )}
+    </div>
+  )
+}
+
+function CompactionPartDisplay({ part }: { part: { auto: boolean } }) {
+  return (
+    <div className="compaction-part">
+      <span className="compaction-icon">📦</span>
+      <span className="compaction-label">Compaction</span>
+      <span className="compaction-type">{part.auto ? "Auto" : "Manual"}</span>
+    </div>
+  )
+}
+
 function App() {
   type NoticeType = "info" | "success" | "error"
 
@@ -116,7 +378,7 @@ function App() {
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [todosExpanded, setTodosExpanded] = useState(false)
   const [query, setQuery] = useState("")
-  const [hideSubagents, setHideSubagents] = useState(false)
+  const [newSessionFolder, setNewSessionFolder] = useState("")
   const [composer, setComposer] = useState("")
   const [busySending, setBusySending] = useState(false)
   const [loadingSessionID, setLoadingSessionID] = useState<string | null>(null)
@@ -135,17 +397,42 @@ function App() {
   const filteredSessions = useMemo(() => {
     const isSubagent = (title: string) => /\(@\S+ subagent\)$/i.test(title)
     return sessions.filter((session) => {
-      if (hideSubagents && isSubagent(session.title)) return false
+      if (isSubagent(session.title)) return false
       const text = query.trim().toLowerCase()
       if (!text) return true
       return session.title.toLowerCase().includes(text) || session.directory.toLowerCase().includes(text)
     })
-  }, [sessions, query, hideSubagents])
+  }, [sessions, query])
 
   const renderedMessages = useMemo(() => {
     return messages
-      .map((message) => ({ ...message, text: extractText(message) }))
-      .filter((message) => message.text)
+      .map((message) => ({
+        ...message,
+        text: extractText(message),
+        toolParts: extractToolParts(message),
+        subtaskParts: extractSubtaskParts(message),
+        reasoningParts: extractReasoningParts(message),
+        fileParts: extractFileParts(message),
+        stepStartParts: extractStepStartParts(message),
+        stepFinishParts: extractStepFinishParts(message),
+        patchParts: extractPatchParts(message),
+        agentParts: extractAgentParts(message),
+        retryParts: extractRetryParts(message),
+        compactionParts: extractCompactionParts(message)
+      }))
+      .filter((message) =>
+        message.text ||
+        message.toolParts.length > 0 ||
+        message.subtaskParts.length > 0 ||
+        message.reasoningParts.length > 0 ||
+        message.fileParts.length > 0 ||
+        message.stepStartParts.length > 0 ||
+        message.stepFinishParts.length > 0 ||
+        message.patchParts.length > 0 ||
+        message.agentParts.length > 0 ||
+        message.retryParts.length > 0 ||
+        message.compactionParts.length > 0
+      )
   }, [messages])
 
   const hasConfiguredServer = Boolean(config.host && config.port > 0)
@@ -202,6 +489,7 @@ function App() {
           directory: session.directory,
           updated: session.time.updated,
           status: statuses[session.id]?.type ?? "idle",
+          statusMessage: statuses[session.id]?.message,
           files: session.summary?.files ?? 0,
           additions: session.summary?.additions ?? 0,
           deletions: session.summary?.deletions ?? 0
@@ -238,8 +526,11 @@ function App() {
   }
 
   async function createSession() {
+    const folder = newSessionFolder.trim()
+    if (!folder) return
     try {
-      const created = await api.createSession(config, "Mobile session")
+      const created = await api.createSession(config, "Mobile session", folder)
+      setNewSessionFolder("")
       await refreshSessions()
       setSelectedID(created.id)
       await loadSelected(created.id, created.directory)
@@ -352,6 +643,25 @@ function App() {
     }
     wasRunningRef.current = runningNow
   }, [selectedSession?.id, selectedSession?.status])
+
+  useEffect(() => {
+    const handleBackButton = () => {
+      if (view === "detail") {
+        setView("sessions")
+      }
+    }
+
+    let listener: any = null
+    CapApp.addListener("backButton", handleBackButton).then((l) => {
+      listener = l
+    })
+
+    return () => {
+      if (listener) {
+        listener.remove()
+      }
+    }
+  }, [view])
 
 
 
@@ -580,20 +890,19 @@ function App() {
         <section className="panel sessions fade-in">
           <div className="header-row">
             <h2>Sessions</h2>
-            <div className="inline-actions">
-              <button
-                onClick={() => setHideSubagents(!hideSubagents)}
-                className={hideSubagents ? "btn-primary" : "btn-secondary"}
-                title={hideSubagents ? "Showing main sessions only" : "Showing all sessions"}
-              >
-                <FilterIcon size={18} />
-                {hideSubagents ? "Subagents hidden" : "Subagents"}
-              </button>
-              <button onClick={createSession} className="btn-primary">
-                <PlusIcon size={18} />
-                New Session
-              </button>
-            </div>
+          </div>
+          
+          <div className="new-session-row">
+            <input
+              placeholder="Enter folder path for new session (e.g., /path/to/project)"
+              value={newSessionFolder}
+              onChange={(event) => setNewSessionFolder(event.target.value)}
+              className="new-session-input"
+            />
+            <button onClick={createSession} className="btn-primary" disabled={!newSessionFolder.trim()}>
+              <PlusIcon size={18} />
+              New Session
+            </button>
           </div>
           
           <input
@@ -615,6 +924,7 @@ function App() {
                 <article 
                   key={session.id} 
                   className={`session-card ${selectedID === session.id ? "active" : ""} fade-in`}
+                  onClick={() => openSession(session.id, session.directory).catch(() => undefined)}
                 >
                   <div className="header-row">
                     <h3>{session.title}</h3>
@@ -634,16 +944,9 @@ function App() {
                     <span className="subtle">• Updated {formatTime(session.updated)}</span>
                   </div>
                   <div className="inline-actions">
-                    <button
-                      onClick={() => openSession(session.id, session.directory).catch(() => undefined)}
-                      className="btn-primary"
-                    >
-                      <PlayIcon size={16} />
-                      Open
-                    </button>
                     <button 
                       className="btn-danger" 
-                      onClick={() => deleteSession(session.id)}
+                      onClick={(e) => { e.stopPropagation(); deleteSession(session.id); }}
                     >
                       <TrashIcon size={16} />
                       Delete
@@ -728,7 +1031,7 @@ function App() {
               </div>
             ) : (
               renderedMessages.map((message) => {
-                const lines = toDisplayLines(message.text)
+                const lines = message.text ? toDisplayLines(message.text) : []
                 return (
                   <article key={message.info.id} className={`message ${message.info.role} fade-in`}>
                     <header>
@@ -737,22 +1040,61 @@ function App() {
                       </strong>
                       <small>{formatTime(message.info.time.created)}</small>
                     </header>
-                    <div className="message-content">
-                      {lines.map((line, index) => (
-                        <p key={index}>{renderInline(line)}</p>
-                      ))}
-                    </div>
+                    {message.stepStartParts.map((part) => (
+                      <StepStartPartDisplay key={part.id} />
+                    ))}
+                    {message.agentParts.map((part) => (
+                      <AgentPartDisplay key={part.id} part={part as { name: string }} />
+                    ))}
+                    {message.reasoningParts.map((part) => (
+                      <ReasoningPartDisplay key={part.id} part={part as { text: string }} />
+                    ))}
+                    {message.subtaskParts.map((part) => (
+                      <SubtaskPartDisplay key={part.id} part={part as { prompt: string; description?: string; agent?: string }} />
+                    ))}
+                    {message.toolParts.map((part) => (
+                      <ToolPartDisplay key={part.id} part={part as { tool: string; state: NonNullable<MessageEnvelope["parts"][0]["state"]> }} />
+                    ))}
+                    {message.fileParts.map((part) => (
+                      <FilePartDisplay key={part.id} part={part as { mime: string; filename?: string; url: string }} />
+                    ))}
+                    {message.patchParts.map((part) => (
+                      <PatchPartDisplay key={part.id} part={part as { hash: string; files: string[] }} />
+                    ))}
+                    {message.stepFinishParts.map((part) => (
+                      <StepFinishPartDisplay key={part.id} part={part as { reason: string; cost?: number; tokens?: { input: number; output: number; reasoning: number } }} />
+                    ))}
+                    {message.retryParts.map((part) => (
+                      <RetryPartDisplay key={part.id} part={part as { attempt: number; error?: { name: string; data: { message: string } } }} />
+                    ))}
+                    {message.compactionParts.map((part) => (
+                      <CompactionPartDisplay key={part.id} part={part as { auto: boolean }} />
+                    ))}
+                    {lines.length > 0 && (
+                      <div className="message-content">
+                        {lines.map((line, index) => (
+                          <p key={index}>{renderInline(line)}</p>
+                        ))}
+                      </div>
+                    )}
                   </article>
                 )
               })
             )}
           </div>
 
+          {selectedSession?.status === "ask" && (
+            <div className="notice info fade-in" style={{ marginBottom: 'var(--space-3)' }}>
+              <strong>OpenCode is asking:</strong>{" "}
+              {selectedSession.statusMessage ?? "Waiting for your response..."}
+            </div>
+          )}
+
           <div className="composer">
             <textarea
               value={composer}
               onChange={(event) => setComposer(event.target.value)}
-              placeholder="Type a prompt or command (start with / for slash commands)..."
+              placeholder={selectedSession?.status === "ask" ? "Type your response..." : "Type a prompt or command (start with / for slash commands)..."}
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault()

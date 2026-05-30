@@ -120,8 +120,9 @@ export const api = {
     return request<CommandInfo[]>(config, "/command")
   },
 
-  createSession(config: ServerConfig, title?: string) {
-    return request<Session>(config, "/session", { method: "POST", body: { title } })
+  createSession(config: ServerConfig, title?: string, directory?: string) {
+    const path = withDirectory("/session", directory)
+    return request<Session>(config, path, { method: "POST", body: { title } })
   },
 
   renameSession(config: ServerConfig, id: string, title: string) {
