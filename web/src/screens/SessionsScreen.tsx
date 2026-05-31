@@ -147,13 +147,13 @@ export default function SessionsScreen({
     })
     const lastWeek = rest.filter((s) => {
       const t = normalizeTime(s.updated)
-      return t >= startOfLastWeek && t < startOfWeek
+      return t >= startOfLastWeek && t < Math.min(startOfWeek, startOfYesterday)
     })
     const thisMonth = rest.filter((s) => {
       const t = normalizeTime(s.updated)
-      return t >= startOfMonth && t < startOfLastWeek
+      return t >= startOfMonth && t < Math.min(startOfLastWeek, startOfYesterday)
     })
-    const older = rest.filter((s) => normalizeTime(s.updated) < startOfMonth)
+    const older = rest.filter((s) => normalizeTime(s.updated) < Math.min(startOfMonth, startOfYesterday))
 
     if (today.length > 0) sections.push({ label: `Today · ${today.length}`, sessions: today })
     if (yesterday.length > 0) sections.push({ label: `Yesterday · ${yesterday.length}`, sessions: yesterday })
