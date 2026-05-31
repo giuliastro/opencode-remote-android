@@ -1,6 +1,21 @@
 import { useState, useRef, useEffect } from "react"
-import type { AgentInfo, DiffFile, MessageEnvelope, QuestionRequest, SessionView, TodoItem, CommandInfo, ProviderInfo } from "../types"
-import { renderInline, toDisplayLines } from "../components/message/messageHelpers"
+import type { AgentInfo, DiffFile, MessageEnvelope, QuestionRequest, ServerConfig, SessionView, TodoItem, CommandInfo, ProviderInfo } from "../types"
+import { api } from "../api"
+import {
+  extractAgentParts,
+  extractCompactionParts,
+  extractFileParts,
+  extractPatchParts,
+  extractReasoningParts,
+  extractRetryParts,
+  extractStepFinishParts,
+  extractStepStartParts,
+  extractSubtaskParts,
+  extractText,
+  extractToolParts,
+  renderInline,
+  toDisplayLines
+} from "../components/message/messageHelpers"
 import ToolPartDisplay from "../components/message/ToolPart"
 import ReasoningPartDisplay from "../components/message/ReasoningPart"
 import SubtaskPartDisplay from "../components/message/SubtaskPart"
@@ -19,6 +34,7 @@ type SessionInfo = {
 }
 
 type ChatScreenProps = {
+  config: ServerConfig
   selectedSession: SessionView | null
   renderedMessages: Array<MessageEnvelope & {
     text: string
@@ -62,10 +78,10 @@ type ChatScreenProps = {
   selectModel: (modelID: string) => Promise<void>
   currentVariant: string | null
   availableVariants: string[]
-  cycleVariant: () => void
+  selectVariant: (variant: string | null) => void
   currentAgent: string | null
   primaryAgents: AgentInfo[]
-  cycleAgent: () => void
+  selectAgent: (agent: string) => void
   questions: QuestionRequest[]
   replyPermission: (requestID: string, reply: "once" | "always" | "reject") => Promise<void>
   replyQuestion: (requestID: string, directory: string, answers: string[][]) => Promise<void>
@@ -82,6 +98,7 @@ function formatCost(cost: number): string {
 }
 
 export default function ChatScreen({
+  config,
   selectedSession,
   renderedMessages,
   loadingSessionID,
@@ -113,10 +130,10 @@ export default function ChatScreen({
   selectModel,
   currentVariant,
   availableVariants,
-  cycleVariant,
+  selectVariant,
   currentAgent,
   primaryAgents,
-  cycleAgent,
+  selectAgent,
   questions,
   replyPermission,
   replyQuestion,
@@ -134,7 +151,11 @@ export default function ChatScreen({
   const [menuOpen, setMenuOpen] = useState(false)
   const [renameOpen, setRenameOpen] = useState(false)
   const [renameValue, setRenameValue] = useState("")
-  const [diffExpanded, setDiffExpanded] = useState(false)
+  const [activeTab, setActiveTab] = useState<"session" | "changes">("session")
+  const [expandedMessages, setExpandedMessages] = useState<Set<string>>(new Set())
+  const [subagentSession, setSubagentSession] = useState<{ id: string; title: string } | null>(null)
+  const [subagentMessages, setSubagentMessages] = useState<MessageEnvelope[]>([])
+  const [subagentLoading, setSubagentLoading] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Question card state
@@ -154,6 +175,42 @@ export default function ChatScreen({
     setCustomText("")
     setIsCustom(false)
   }, [activeQuestion?.id])
+
+  useEffect(() => {
+    setActiveTab("session")
+    setExpandedMessages(new Set())
+    setSubagentSession(null)
+    setSubagentMessages([])
+  }, [selectedSession?.id])
+
+  useEffect(() => {
+    if (!subagentSession || !selectedSession) return
+    let cancelled = false
+    const sessionID = subagentSession.id
+
+    async function loadSubagent() {
+      setSubagentLoading(true)
+      try {
+        const loaded = await api.loadMessages(config, sessionID, "")
+        if (!cancelled) {
+          setSubagentMessages(loaded)
+        }
+      } catch {
+        if (!cancelled) {
+          setSubagentMessages([])
+        }
+      } finally {
+        if (!cancelled) {
+          setSubagentLoading(false)
+        }
+      }
+    }
+
+    loadSubagent().catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [config, selectedSession, subagentSession])
 
   const currentQ = activeQuestion?.questions[qIdx]
   const totalQ = activeQuestion?.questions.length ?? 0
@@ -259,6 +316,150 @@ export default function ChatScreen({
 
   const costLabel = selectedSession?.cost ? formatCost(selectedSession.cost) : ""
 
+  const subagentRenderedMessages = subagentMessages
+    .map((message) => ({
+      ...message,
+      text: extractText(message),
+      toolParts: extractToolParts(message),
+      subtaskParts: extractSubtaskParts(message),
+      reasoningParts: extractReasoningParts(message),
+      fileParts: extractFileParts(message),
+      stepStartParts: extractStepStartParts(message),
+      stepFinishParts: extractStepFinishParts(message),
+      patchParts: extractPatchParts(message),
+      agentParts: extractAgentParts(message),
+      retryParts: extractRetryParts(message),
+      compactionParts: extractCompactionParts(message)
+    }))
+    .filter((message) =>
+      message.text ||
+      message.toolParts.length > 0 ||
+      message.subtaskParts.length > 0 ||
+      message.reasoningParts.length > 0 ||
+      message.fileParts.length > 0 ||
+      message.stepStartParts.length > 0 ||
+      message.stepFinishParts.length > 0 ||
+      message.patchParts.length > 0 ||
+      message.agentParts.length > 0 ||
+      message.retryParts.length > 0 ||
+      message.compactionParts.length > 0
+    )
+
+  function toggleMessageExpanded(messageID: string) {
+    setExpandedMessages((prev) => {
+      const next = new Set(prev)
+      if (next.has(messageID)) next.delete(messageID)
+      else next.add(messageID)
+      return next
+    })
+  }
+
+  function handleOpenSubagent(sessionId: string, title: string) {
+    setSubagentSession({ id: sessionId, title })
+  }
+
+  function getDiffStatus(file: DiffFile): "added" | "deleted" | "modified" {
+    if (file.status === "added" || file.status === "deleted" || file.status === "modified") return file.status
+    if (file.additions > 0 && file.deletions === 0) return "added"
+    if (file.deletions > 0 && file.additions === 0) return "deleted"
+    return "modified"
+  }
+
+  function renderMessageList(
+    messages: ChatScreenProps["renderedMessages"],
+    options: { readOnly?: boolean } = {}
+  ) {
+    return messages.map((message) => {
+      const lines = message.text ? toDisplayLines(message.text) : []
+      const isUser = message.info.role === "user"
+      const agentName = message.info.agent ?? "opencode"
+      const hasToolCalls = message.toolParts.length > 0
+      const isCollapsed = !options.readOnly && !isUser && hasToolCalls && !expandedMessages.has(message.info.id)
+
+      return (
+        <div key={message.info.id} className={`brow ${isUser ? "user" : "ai"}`}>
+          <div className={`avatar ${isUser ? "me" : "ai"}`}>
+            {isUser ? "ME" : "AI"}
+          </div>
+          <div className="bcol">
+            <div className="brole">{isUser ? "you" : agentName}</div>
+            <div className="bubble">
+              {!options.readOnly && !isUser && hasToolCalls && !isCollapsed && (
+                <button className="msg-collapse-bar" onClick={() => toggleMessageExpanded(message.info.id)}>
+                  <i className="ti ti-chevron-left" />
+                  <span>collapse</span>
+                </button>
+              )}
+
+              {isCollapsed ? (
+                <>
+                  {lines.length > 0 && (
+                    <div className="message-content">
+                      {lines.map((line, index) => (
+                        <p key={index}>{renderInline(line)}</p>
+                      ))}
+                    </div>
+                  )}
+                  <button className="msg-summary-chip" onClick={() => toggleMessageExpanded(message.info.id)}>
+                    <span>
+                      <i className="ti ti-tools" />
+                      {message.toolParts.length} tool calls
+                    </span>
+                    <i className="ti ti-chevron-right" />
+                  </button>
+                </>
+              ) : (
+                <>
+                  {message.stepStartParts.map((part) => (
+                    <StepStartPartDisplay key={part.id} />
+                  ))}
+                  {message.agentParts.map((part) => (
+                    <AgentPartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {message.reasoningParts.map((part) => (
+                    <ReasoningPartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {message.subtaskParts.map((part) => (
+                    <SubtaskPartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {message.toolParts.map((part) => (
+                    <ToolPartDisplay
+                      key={part.id}
+                      part={part as any}
+                      onOpenSubagent={options.readOnly ? undefined : handleOpenSubagent}
+                    />
+                  ))}
+                  {message.fileParts.map((part) => (
+                    <FilePartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {message.patchParts.map((part) => (
+                    <PatchPartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {message.stepFinishParts.map((part) => (
+                    <StepFinishPartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {message.retryParts.map((part) => (
+                    <RetryPartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {message.compactionParts.map((part) => (
+                    <CompactionPartDisplay key={part.id} part={part as any} />
+                  ))}
+                  {lines.length > 0 && (
+                    <div className="message-content">
+                      {lines.map((line, index) => (
+                        <p key={index}>{renderInline(line)}</p>
+                      ))}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )
+    })
+  }
+
   return (
     <div className="app-screen">
       {/* Chat header */}
@@ -319,92 +520,121 @@ export default function ChatScreen({
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="messages" ref={messagesRef as React.RefObject<HTMLDivElement>}>
-        {loadingSessionID === selectedID ? (
-          <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
-            <i className="ti ti-loader" style={{ fontSize: "32px", display: "block", marginBottom: "12px" }}></i>
-            <p style={{ fontSize: "13px" }}>Loading session...</p>
-          </div>
-        ) : renderedMessages.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
-            <i className="ti ti-message-2" style={{ fontSize: "48px", display: "block", marginBottom: "12px", opacity: 0.4 }}></i>
-            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>No messages yet</p>
-            <p style={{ fontSize: "11px", marginTop: "4px" }}>Start a conversation below</p>
-          </div>
-        ) : (
-          renderedMessages.map((message) => {
-            const lines = message.text ? toDisplayLines(message.text) : []
-            const isUser = message.info.role === "user"
-            const agentName = message.info.agent ?? "opencode"
+      <div className="chat-tabs" role="tablist" aria-label="Chat views">
+        <button className={`chat-tab${activeTab === "session" ? " active" : ""}`} onClick={() => setActiveTab("session")}>
+          Session
+        </button>
+        <button className={`chat-tab${activeTab === "changes" ? " active" : ""}`} onClick={() => setActiveTab("changes")}>
+          Changes
+          {diff.length > 0 && <span className="chat-tab-count">{diff.length}</span>}
+        </button>
+      </div>
 
-            return (
-              <div key={message.info.id} className={`brow ${isUser ? "user" : "ai"}`}>
-                <div className={`avatar ${isUser ? "me" : "ai"}`}>
-                  {isUser ? "ME" : "AI"}
-                </div>
+      {activeTab === "session" ? (
+        <>
+          <div className="messages" ref={messagesRef as React.RefObject<HTMLDivElement>}>
+            {loadingSessionID === selectedID ? (
+              <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
+                <i className="ti ti-loader" style={{ fontSize: "32px", display: "block", marginBottom: "12px" }}></i>
+                <p style={{ fontSize: "13px" }}>Loading session...</p>
+              </div>
+            ) : renderedMessages.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
+                <i className="ti ti-message-2" style={{ fontSize: "48px", display: "block", marginBottom: "12px", opacity: 0.4 }}></i>
+                <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>No messages yet</p>
+                <p style={{ fontSize: "11px", marginTop: "4px" }}>Start a conversation below</p>
+              </div>
+            ) : (
+              renderMessageList(renderedMessages)
+            )}
+
+            {isRunning && !isAsking && renderedMessages.length > 0 && (
+              <div className="brow ai">
+                <div className="avatar ai">AI</div>
                 <div className="bcol">
-                  <div className="brole">{isUser ? "you" : agentName}</div>
-                  <div className="bubble">
-                    {message.stepStartParts.map((part) => (
-                      <StepStartPartDisplay key={part.id} />
-                    ))}
-                    {message.agentParts.map((part) => (
-                      <AgentPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.reasoningParts.map((part) => (
-                      <ReasoningPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.subtaskParts.map((part) => (
-                      <SubtaskPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.toolParts.map((part) => (
-                      <ToolPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.fileParts.map((part) => (
-                      <FilePartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.patchParts.map((part) => (
-                      <PatchPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.stepFinishParts.map((part) => (
-                      <StepFinishPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.retryParts.map((part) => (
-                      <RetryPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {message.compactionParts.map((part) => (
-                      <CompactionPartDisplay key={part.id} part={part as any} />
-                    ))}
-                    {lines.length > 0 && (
-                      <div className="message-content">
-                        {lines.map((line, index) => (
-                          <p key={index}>{renderInline(line)}</p>
-                        ))}
-                      </div>
-                    )}
+                  <div className="brole">{sessionInfo.agent ?? "opencode"}</div>
+                  <div className="typing">
+                    <div className="tdot"></div>
+                    <div className="tdot"></div>
+                    <div className="tdot"></div>
                   </div>
                 </div>
               </div>
-            )
-          })
-        )}
-
-        {/* Typing indicator */}
-        {isRunning && !isAsking && renderedMessages.length > 0 && (
-          <div className="brow ai">
-            <div className="avatar ai">AI</div>
-            <div className="bcol">
-              <div className="brole">{sessionInfo.agent ?? "opencode"}</div>
-              <div className="typing">
-                <div className="tdot"></div>
-                <div className="tdot"></div>
-                <div className="tdot"></div>
-              </div>
-            </div>
+            )}
           </div>
-        )}
-      </div>
+
+          {todos.length > 0 && (
+            <div className="todo-box" style={{ padding: "0 14px", flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  padding: "8px 0",
+                  cursor: "pointer",
+                  fontSize: "11px",
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  color: "var(--text-muted)"
+                }}
+                onClick={() => setTodosExpanded(!todosExpanded)}
+              >
+                <span>
+                  <i className="ti ti-list-check" style={{ marginRight: "4px", color: "var(--accent)" }}></i>
+                  Todo ({todos.length})
+                </span>
+                <i className={`ti ti-chevron-${todosExpanded ? "up" : "down"}`}></i>
+              </div>
+              {todosExpanded && (
+                <div style={{ paddingBottom: "8px" }}>
+                  {todos.slice(0, 6).map((item) => (
+                    <div
+                      key={item.id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        padding: "4px 0",
+                        fontSize: "11px",
+                        color: "var(--text-secondary)"
+                      }}
+                    >
+                      <span style={{ color: item.status === "completed" ? "var(--accent)" : "var(--text-muted)" }}>
+                        {item.status === "completed" ? <i className="ti ti-checkbox"></i> : <i className="ti ti-square"></i>}
+                      </span>
+                      <span>{item.content}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="changes-list">
+          {diff.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
+              <i className="ti ti-git-diff" style={{ fontSize: "40px", display: "block", marginBottom: "12px", opacity: 0.4 }}></i>
+              <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>No changes yet</p>
+            </div>
+          ) : (
+            diff.map((file) => {
+              const status = getDiffStatus(file)
+              return (
+                <div key={file.file} className="changes-file">
+                  <div className={`changes-file-status ${status}`}>{status}</div>
+                  <div className="changes-file-main">
+                    <div className="changes-file-name">{file.file}</div>
+                    <div className="changes-file-stats">
+                      {file.additions > 0 && <span className="diff-add">+{file.additions}</span>}
+                      {file.deletions > 0 && <span className="diff-del">-{file.deletions}</span>}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      )}
 
       {/* Permission banner */}
       {isPermission && selectedSession?.requestID && (
@@ -506,83 +736,6 @@ export default function ChatScreen({
         </div>
       )}
 
-      {/* Todo box */}
-      {todos.length > 0 && (
-        <div className="todo-box" style={{ padding: "0 14px", flexShrink: 0 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "8px 0",
-              cursor: "pointer",
-              fontSize: "11px",
-              fontFamily: "'IBM Plex Mono', monospace",
-              color: "var(--text-muted)"
-            }}
-            onClick={() => setTodosExpanded(!todosExpanded)}
-          >
-            <span>
-              <i className="ti ti-list-check" style={{ marginRight: "4px", color: "var(--accent)" }}></i>
-              Todo ({todos.length})
-            </span>
-            <i className={`ti ti-chevron-${todosExpanded ? "up" : "down"}`}></i>
-          </div>
-          {todosExpanded && (
-            <div style={{ paddingBottom: "8px" }}>
-              {todos.slice(0, 6).map((item) => (
-                <div
-                  key={item.id}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    padding: "4px 0",
-                    fontSize: "11px",
-                    color: "var(--text-secondary)"
-                  }}
-                >
-                  <span style={{ color: item.status === "completed" ? "var(--accent)" : "var(--text-muted)" }}>
-                    {item.status === "completed" ? (
-                      <i className="ti ti-checkbox"></i>
-                    ) : (
-                      <i className="ti ti-square"></i>
-                    )}
-                  </span>
-                  <span>{item.content}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Changes / diff box */}
-      {diff.length > 0 && (
-        <div className="diff-box" style={{ marginTop: "8px" }}>
-          <div className="diff-inner">
-            <div className="diff-header" onClick={() => setDiffExpanded((v) => !v)}>
-              <span>
-                <i className="ti ti-git-diff" style={{ marginRight: "4px", color: "var(--accent)" }}></i>
-                Changes ({diff.length})
-              </span>
-              <i className={`ti ti-chevron-${diffExpanded ? "up" : "down"}`}></i>
-            </div>
-            {diffExpanded && diff.map((file) => (
-              <div key={file.file} className="diff-file-row">
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
-                  {file.file.split(/[\\/]/).pop()}
-                </span>
-                <div className="diff-stats">
-                  {file.additions > 0 && <span className="diff-add">+{file.additions}</span>}
-                  {file.deletions > 0 && <span className="diff-del">-{file.deletions}</span>}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Error display */}
       {runtimeError && (
         <div className="error fade-in" style={{ padding: "8px 14px 4px", fontSize: "11px", flexShrink: 0 }}>
@@ -614,10 +767,10 @@ export default function ChatScreen({
           selectModel={selectModel}
           currentVariant={currentVariant}
           availableVariants={availableVariants}
-          cycleVariant={cycleVariant}
+          selectVariant={selectVariant}
           currentAgent={currentAgent}
           primaryAgents={primaryAgents}
-          cycleAgent={cycleAgent}
+          selectAgent={selectAgent}
         />
       )}
 
@@ -641,6 +794,32 @@ export default function ChatScreen({
                 Save
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {subagentSession && (
+        <div className="subagent-overlay">
+          <div className="subagent-header">
+            <button className="subagent-close" onClick={() => setSubagentSession(null)}>
+              <i className="ti ti-chevron-left" />
+            </button>
+            <div className="subagent-title">Subagent: {subagentSession.title}</div>
+          </div>
+          <div className="messages">
+            {subagentLoading ? (
+              <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
+                <i className="ti ti-loader" style={{ fontSize: "32px", display: "block", marginBottom: "12px" }}></i>
+                <p style={{ fontSize: "13px" }}>Loading subagent...</p>
+              </div>
+            ) : subagentRenderedMessages.length === 0 ? (
+              <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
+                <i className="ti ti-robot" style={{ fontSize: "40px", display: "block", marginBottom: "12px", opacity: 0.4 }}></i>
+                <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>No subagent messages</p>
+              </div>
+            ) : (
+              renderMessageList(subagentRenderedMessages, { readOnly: true })
+            )}
           </div>
         </div>
       )}

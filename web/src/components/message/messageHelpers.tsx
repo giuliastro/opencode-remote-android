@@ -1,4 +1,11 @@
-import type { MessageEnvelope } from "../../types"
+import type { MessageEnvelope, ToolState } from "../../types"
+
+type ToolPart = {
+  id: string
+  type: string
+  tool: string
+  state: ToolState
+}
 
 export function formatTime(epoch: number): string {
   if (!epoch) return "-"
@@ -14,7 +21,7 @@ export function extractText(msg: MessageEnvelope): string {
 }
 
 export function extractToolParts(msg: MessageEnvelope) {
-  return msg.parts.filter((part) => part.type === "tool" && part.tool && part.state)
+  return msg.parts.filter((part): part is ToolPart => part.type === "tool" && !!part.tool && !!part.state)
 }
 
 export function extractSubtaskParts(msg: MessageEnvelope) {

@@ -135,6 +135,7 @@ export function useServerData(config: ServerConfig) {
           title: session.title,
           directory: session.directory,
           projectID: session.projectID,
+          parentID: session.parentID,
           updated: session.time.updated,
           status: statuses[session.id]?.type ?? "idle",
           statusMessage: statuses[session.id]?.message,

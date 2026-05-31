@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react"
-import type { AgentInfo, CommandInfo, MessageEnvelope, ServerConfig, SessionView } from "../types"
+import type { CommandInfo, MessageEnvelope, ServerConfig, SessionView } from "../types"
 import { api } from "../api"
 
 export function useChat(params: {
@@ -11,9 +11,6 @@ export function useChat(params: {
   setCurrentAgent: (agent: string | null) => void
   currentVariant: string | null
   setCurrentVariant: (variant: string | null) => void
-  sessionInfo: { agent: string | null; model: { providerID: string; modelID: string } | null; variant: string | null }
-  availableVariants: string[]
-  primaryAgents: AgentInfo[]
   loadSelected: (id: string, dir: string) => Promise<void>
   refreshSessions: () => Promise<void>
   createSession: () => Promise<void>
@@ -30,9 +27,6 @@ export function useChat(params: {
     setCurrentAgent,
     currentVariant,
     setCurrentVariant,
-    sessionInfo,
-    availableVariants,
-    primaryAgents,
     loadSelected,
     refreshSessions,
     createSession,
@@ -176,26 +170,12 @@ export function useChat(params: {
     setTimeout(() => textareaRef.current?.focus(), 0)
   }
 
-  function cycleAgent() {
-    if (primaryAgents.length === 0) return
-    const current = currentAgent ?? sessionInfo.agent ?? primaryAgents[0].name
-    const idx = primaryAgents.findIndex((a) => a.name === current)
-    const next = primaryAgents[(idx + 1) % primaryAgents.length]
-    setCurrentAgent(next.name)
+  function selectAgent(agent: string) {
+    setCurrentAgent(agent)
   }
 
-  function cycleVariant() {
-    if (availableVariants.length === 0) return
-    if (!currentVariant) {
-      setCurrentVariant(availableVariants[0])
-      return
-    }
-    const idx = availableVariants.indexOf(currentVariant)
-    if (idx === -1 || idx === availableVariants.length - 1) {
-      setCurrentVariant(null)
-    } else {
-      setCurrentVariant(availableVariants[idx + 1])
-    }
+  function selectVariant(variant: string | null) {
+    setCurrentVariant(variant)
   }
 
   async function selectModel(modelID: string) {
@@ -282,8 +262,8 @@ export function useChat(params: {
     filteredCommands,
     send,
     handleSlashSelect,
-    cycleAgent,
-    cycleVariant,
+    selectAgent,
+    selectVariant,
     abortSession,
     selectModel,
     replyPermission,

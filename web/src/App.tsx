@@ -25,9 +25,6 @@ function App() {
     setCurrentAgent: sd.setCurrentAgent,
     currentVariant: sd.currentVariant,
     setCurrentVariant: sd.setCurrentVariant,
-    sessionInfo: sd.sessionInfo,
-    availableVariants: sd.availableVariants,
-    primaryAgents: sd.primaryAgents,
     loadSelected: sd.loadSelected,
     refreshSessions: sd.refreshSessions,
     createSession: sd.createSession,
@@ -97,6 +94,7 @@ function App() {
     if (screen === "chat") {
       return (
         <ChatScreen
+          config={sv.config}
           selectedSession={sd.selectedSession}
           renderedMessages={sd.renderedMessages}
           loadingSessionID={sd.loadingSessionID}
@@ -128,10 +126,10 @@ function App() {
           selectModel={chat.selectModel}
           currentVariant={sd.currentVariant}
           availableVariants={sd.availableVariants}
-          cycleVariant={chat.cycleVariant}
+          selectVariant={chat.selectVariant}
           currentAgent={sd.currentAgent}
           primaryAgents={sd.primaryAgents}
-          cycleAgent={chat.cycleAgent}
+          selectAgent={chat.selectAgent}
           questions={sd.questions}
           replyPermission={chat.replyPermission}
           replyQuestion={chat.replyQuestion}

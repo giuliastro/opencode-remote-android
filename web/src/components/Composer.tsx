@@ -2,6 +2,8 @@ import { useCallback, useState } from "react"
 import type { AgentInfo, CommandInfo, ProviderInfo } from "../types"
 import SlashPopover from "./SlashPopover"
 import ModelPicker from "./ModelPicker"
+import AgentPicker from "./AgentPicker"
+import VariantPicker from "./VariantPicker"
 
 type Props = {
   composer: string
@@ -24,10 +26,10 @@ type Props = {
   selectModel: (modelID: string) => Promise<void>
   currentVariant: string | null
   availableVariants: string[]
-  cycleVariant: () => void
+  selectVariant: (variant: string | null) => void
   currentAgent: string | null
   primaryAgents: AgentInfo[]
-  cycleAgent: () => void
+  selectAgent: (agent: string) => void
 }
 
 export default function Composer({
@@ -50,12 +52,14 @@ export default function Composer({
   selectModel,
   currentVariant,
   availableVariants,
-  cycleVariant,
+  selectVariant,
   currentAgent,
   primaryAgents,
-  cycleAgent
+  selectAgent
 }: Props) {
   const [modelPickerOpen, setModelPickerOpen] = useState(false)
+  const [agentPickerOpen, setAgentPickerOpen] = useState(false)
+  const [variantPickerOpen, setVariantPickerOpen] = useState(false)
 
   const handleChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -136,6 +140,24 @@ export default function Composer({
         />
       )}
 
+      {agentPickerOpen && (
+        <AgentPicker
+          agents={primaryAgents}
+          currentAgent={currentAgent}
+          onSelect={selectAgent}
+          onClose={() => setAgentPickerOpen(false)}
+        />
+      )}
+
+      {variantPickerOpen && (
+        <VariantPicker
+          availableVariants={availableVariants}
+          currentVariant={currentVariant}
+          onSelect={selectVariant}
+          onClose={() => setVariantPickerOpen(false)}
+        />
+      )}
+
       {slashOpen && filteredCommands.length > 0 && (
         <SlashPopover
           commands={filteredCommands}
@@ -158,8 +180,8 @@ export default function Composer({
         {availableVariants.length > 0 && (
           <button
             className="cmeta-btn"
-            onClick={cycleVariant}
-            title="Cycle variant"
+            onClick={() => setVariantPickerOpen(true)}
+            title="Select variant"
           >
             <i className="ti ti-sparkles" />
             <span>{currentVariant ?? "auto"}</span>
@@ -169,8 +191,8 @@ export default function Composer({
         {primaryAgents.length > 0 && agentDisplayName && (
           <button
             className="cmeta-btn"
-            onClick={cycleAgent}
-            title="Cycle agent"
+            onClick={() => setAgentPickerOpen(true)}
+            title="Select agent"
           >
             <i className="ti ti-robot" />
             <span>{agentDisplayName}</span>

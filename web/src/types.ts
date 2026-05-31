@@ -15,6 +15,7 @@ export type Session = {
   title: string
   directory: string
   projectID?: string
+  parentID?: string
   cost?: number
   tokens?: {
     input: number
@@ -166,6 +167,7 @@ export type DiffFile = {
   file: string
   additions: number
   deletions: number
+  status?: string
 }
 
 export type SessionView = {
@@ -173,6 +175,7 @@ export type SessionView = {
   title: string
   directory: string
   projectID?: string
+  parentID?: string
   updated: number
   status: string
   statusMessage?: string
