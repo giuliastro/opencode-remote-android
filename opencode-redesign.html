@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>OpenCode Remote — UI Redesign</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #08090d; font-family: 'DM Sans', sans-serif; display: flex; flex-direction: column; align-items: center; padding: 48px 24px 80px; gap: 48px; min-height: 100vh; }
+
+h2.section-sep {
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.14em; color: #2a3450;
+  display: flex; align-items: center; gap: 12px; width: 100%; max-width: 900px;
+}
+h2.section-sep::after { content:''; flex:1; height:1px; background:#111825; }
+
+.phone-row { display: flex; gap: 28px; flex-wrap: wrap; justify-content: center; align-items: flex-start; }
+.phone-col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.phone-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #2a3450; text-transform: uppercase; letter-spacing: 0.1em; }
+
+.phone {
+  width: 375px; height: 730px;
+  background: #0c0e12; border-radius: 48px;
+  overflow: hidden; position: relative;
+  border: 1.5px solid #1a2035;
+  display: flex; flex-direction: column;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+
+.status-bar {
+  height: 44px; display: flex; align-items: center;
+  justify-content: space-between; padding: 12px 24px 0;
+  flex-shrink: 0;
+}
+.sb-time { font-size: 15px; font-weight: 600; color: #e8eaed; }
+.sb-icons { display: flex; align-items: center; gap: 5px; color: #e8eaed; }
+.sb-icons i { font-size: 15px; }
+
+.screen { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ── Nav header ── */
+.nav-header {
+  padding: 6px 22px 12px;
+  display: flex; align-items: flex-end; justify-content: space-between;
+  flex-shrink: 0;
+}
+.nav-title { font-size: 30px; font-weight: 700; color: #f0f3f8; letter-spacing: -0.8px; line-height: 1; }
+.nav-sub { font-size: 11px; color: #2e3d58; font-family: 'IBM Plex Mono', monospace; margin-top: 3px; }
+.nav-action {
+  width: 36px; height: 36px; background: #131a26; border: 1px solid #1e2840;
+  border-radius: 11px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #4a6080; font-size: 19px;
+}
+
+/* ── Search bar ── */
+.search-row { padding: 0 16px 10px; flex-shrink: 0; }
+.search-box {
+  background: #101520; border: 1px solid #182030;
+  border-radius: 12px; display: flex; align-items: center; gap: 8px; padding: 9px 12px;
+}
+.search-box i { font-size: 16px; color: #2a3450; }
+.search-box input {
+  background: none; border: none; outline: none; font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px; color: #8090b0; width: 100%;
+}
+.search-box input::placeholder { color: #2a3450; }
+
+/* ── New session ── */
+.new-row {
+  padding: 0 16px 12px; display: flex; gap: 7px; flex-shrink: 0;
+  border-bottom: 1px solid #0d1118;
+}
+.new-input {
+  flex: 1; background: #101520; border: 1px solid #182030; border-radius: 10px;
+  padding: 9px 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: #5a7090;
+  outline: none;
+}
+.new-input::placeholder { color: #2a3050; }
+.new-btn {
+  background: #102018; border: 1px solid #1a4030; color: #39ff9a;
+  border-radius: 10px; padding: 9px 14px; font-size: 12px; font-weight: 600;
+  font-family: 'IBM Plex Mono', monospace; cursor: pointer; display: flex; align-items: center; gap: 4px; white-space: nowrap;
+}
+.new-btn i { font-size: 13px; }
+
+/* ── Sessions list ── */
+.list { flex: 1; overflow-y: auto; padding: 12px 16px 8px; }
+.list::-webkit-scrollbar { display: none; }
+
+.list-section { font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: #2a3450; margin: 0 2px 8px; }
+
+.scard {
+  background: #101520; border: 1px solid #172030;
+  border-radius: 16px; padding: 13px 14px; margin-bottom: 7px;
+  cursor: pointer; display: flex; gap: 11px; align-items: flex-start;
+  transition: border-color 0.12s;
+}
+.scard.running { background: #0b1812; border-color: #173028; }
+.scard.ask { background: #120f04; border-color: #2a2008; }
+
+.sdot { width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; flex-shrink: 0; }
+.sdot.green { background: #39ff9a; box-shadow: 0 0 7px #39ff9a66; }
+.sdot.amber { background: #f59e0b; box-shadow: 0 0 7px #f59e0b55; }
+.sdot.gray { background: #1e2a40; }
+
+.scard-info { flex: 1; min-width: 0; }
+.scard-name { font-size: 14px; font-weight: 600; color: #c0ccd8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 3px; }
+.scard.running .scard-name { color: #7be8b8; }
+.scard.ask .scard-name { color: #f0c060; }
+.scard-path { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: #2a3450; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tags { display: flex; gap: 4px; flex-wrap: wrap; }
+.tag {
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+  padding: 2px 7px; border-radius: 4px; letter-spacing: 0.04em;
+}
+.tag.running { background: #0a1a12; color: #39ff9a; border: 1px solid #15402a; }
+.tag.ask { background: #1a1200; color: #f59e0b; border: 1px solid #2a2000; }
+.tag.idle { background: #111820; color: #2e3d58; border: 1px solid #182030; }
+.tag.model { background: #111828; color: #3a5070; border: 1px solid #182038; }
+.scard-chevron { color: #1e2840; font-size: 16px; margin-top: 2px; }
+
+/* ── Tab bar ── */
+.tab-bar {
+  height: 70px; background: #0a0c10; border-top: 1px solid #0f1420;
+  display: flex; align-items: flex-start; padding: 0; flex-shrink: 0;
+}
+.tab-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: flex-start; padding: 11px 0 0; cursor: pointer;
+  gap: 3px; border: none; background: none; color: #2a3450; transition: color 0.12s;
+}
+.tab-item.active { color: #39ff9a; }
+.tab-icon { font-size: 24px; position: relative; }
+.tab-icon.badge::after {
+  content: '2'; position: absolute; top: -3px; right: -9px;
+  background: #39ff9a; color: #080c10; font-size: 8px; font-weight: 700;
+  width: 14px; height: 14px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.tab-label { font-size: 10px; font-weight: 600; }
+
+/* ── Chat screen ── */
+.chat-header {
+  padding: 8px 16px 10px; display: flex; align-items: center; gap: 9px;
+  border-bottom: 1px solid #0f1520; flex-shrink: 0;
+}
+.back-btn {
+  width: 34px; height: 34px; background: #131a26; border: 1px solid #1e2840;
+  border-radius: 10px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #4a6080; font-size: 19px; flex-shrink: 0;
+}
+.chat-hinfo { flex: 1; min-width: 0; }
+.chat-htitle { font-size: 15px; font-weight: 700; color: #d0d8e8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chat-hsub { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: #2e3d58; }
+.chat-hbadges { display: flex; align-items: center; gap: 5px; flex-shrink: 0; }
+.running-pill {
+  display: flex; align-items: center; gap: 4px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 9px; font-weight: 600;
+  color: #39ff9a; background: #0a1c12; border: 1px solid #1a4030;
+  border-radius: 5px; padding: 3px 7px; letter-spacing: 0.06em;
+}
+.rpulse { width: 5px; height: 5px; border-radius: 50%; background: #39ff9a; animation: rp 1.5s infinite ease-in-out; }
+@keyframes rp { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.4;transform:scale(0.8)} }
+.stop-btn {
+  width: 28px; height: 28px; background: #1a0a0a; border: 1px solid #3a1010;
+  border-radius: 8px; color: #d04040; font-size: 12px;
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+
+.messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.messages::-webkit-scrollbar { display: none; }
+
+.brow { display: flex; gap: 8px; max-width: 88%; }
+.brow.user { align-self: flex-end; flex-direction: row-reverse; }
+.brow.ai { align-self: flex-start; }
+
+.avatar {
+  width: 26px; height: 26px; border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px; font-weight: 700; flex-shrink: 0; margin-top: 2px;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.avatar.me { background: #0c1e3a; color: #4a8ad0; }
+.avatar.ai { background: #0a1a12; color: #39ff9a; }
+
+.bcol { display: flex; flex-direction: column; gap: 3px; }
+.brole { font-size: 9px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase; letter-spacing: 0.1em; color: #2a3450; padding: 0 2px; }
+.brow.user .brole { text-align: right; }
+.bubble {
+  padding: 10px 13px; border-radius: 14px; font-size: 13px; line-height: 1.55;
+  border: 1px solid #172030; background: #101520; color: #b0bcd0;
+}
+.brow.user .bubble { background: #0a1e3a; border-color: #142848; color: #6a9cd0; border-bottom-right-radius: 4px; }
+.brow.ai .bubble { border-bottom-left-radius: 4px; }
+
+.tool-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; background: #0e0c06; border: 1px solid #282010;
+  border-left: 3px solid #f59e0b; border-radius: 7px; margin-top: 6px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: #806040;
+}
+.tool-row i { color: #f59e0b; font-size: 12px; }
+.code-snip {
+  background: #060a0e; border: 1px solid #102030; border-left: 3px solid #39ff9a;
+  border-radius: 8px; padding: 8px 10px; font-family: 'IBM Plex Mono', monospace;
+  font-size: 10px; color: #40c080; line-height: 1.65; margin-top: 6px; white-space: pre;
+}
+.typing { display: flex; gap: 3px; align-items: center; padding: 10px 13px; background: #101520; border: 1px solid #172030; border-radius: 14px; border-bottom-left-radius: 4px; }
+.tdot { width: 4px; height: 4px; border-radius: 50%; background: #39ff9a; animation: blink 1.2s infinite ease-in-out; }
+.tdot:nth-child(2) { animation-delay: 0.2s; }
+.tdot:nth-child(3) { animation-delay: 0.4s; }
+@keyframes blink { 0%,80%,100%{opacity:0.2} 40%{opacity:1} }
+
+/* ── Composer ── */
+.composer { padding: 8px 14px 12px; border-top: 1px solid #0f1420; flex-shrink: 0; }
+.composer-box {
+  background: #101520; border: 1px solid #182030;
+  border-radius: 14px; display: flex; align-items: flex-end; gap: 8px; padding: 10px 12px;
+}
+.composer-box:focus-within { border-color: rgba(57,255,154,0.2); }
+.ctextarea {
+  flex: 1; background: none; border: none; outline: none;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #8090b0;
+  resize: none; min-height: 20px; max-height: 100px; line-height: 1.5;
+}
+.ctextarea::placeholder { color: #2a3450; }
+.csend {
+  width: 30px; height: 30px; border-radius: 9px; background: #39ff9a; border: none;
+  color: #080c10; font-size: 15px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+.csend i { font-size: 15px; }
+.composer-hints { display: flex; align-items: center; justify-content: space-between; padding: 6px 2px 0; }
+.chint { font-size: 10px; color: #1e2a40; font-family: 'IBM Plex Mono', monospace; }
+.cpills { display: flex; gap: 4px; }
+.cpill {
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+  padding: 2px 7px; background: #101520; border: 1px solid #182030;
+  border-radius: 4px; color: #2a3450; cursor: pointer;
+}
+
+/* ── Settings screen ── */
+.settings-scroll { flex: 1; overflow-y: auto; padding: 4px 16px 12px; }
+.settings-scroll::-webkit-scrollbar { display: none; }
+.conn-banner {
+  background: #0a1c12; border: 1px solid #1a4030; border-radius: 12px;
+  padding: 10px 14px; display: flex; align-items: center; gap: 8px;
+  font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #39ff9a;
+  margin-bottom: 20px;
+}
+.sgroup { margin-bottom: 22px; }
+.sgroup-label {
+  font-size: 11px; font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.12em; color: #2a3450;
+  margin-bottom: 8px; padding: 0 2px;
+}
+.sfield { background: #101520; border: 1px solid #182030; border-radius: 14px; overflow: hidden; margin-bottom: 8px; }
+.sfield-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 14px; border-bottom: 1px solid #0c1118;
+}
+.sfield-row:last-child { border-bottom: none; }
+.sfl { font-size: 14px; font-weight: 500; color: #b0bcd0; }
+.sfs { font-size: 11px; color: #2a3450; font-family: 'IBM Plex Mono', monospace; margin-top: 2px; }
+.sfield-input {
+  background: #0c1018; border: 1px solid #142030; border-radius: 8px;
+  padding: 6px 10px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: #6080a0;
+  width: 140px; outline: none; text-align: right;
+}
+.stoggle {
+  width: 42px; height: 24px; background: #182030; border-radius: 12px;
+  position: relative; cursor: pointer; border: none;
+  transition: background 0.2s;
+}
+.stoggle::after {
+  content: ''; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 50%; background: #2a3a5a;
+  transition: left 0.2s, background 0.2s;
+}
+.stoggle.on { background: #1a3028; }
+.stoggle.on::after { left: 21px; background: #39ff9a; }
+.sbtn-row { display: flex; gap: 8px; }
+.sbtn {
+  flex: 1; padding: 12px; border-radius: 12px; font-size: 14px; font-weight: 600;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  font-family: 'DM Sans', sans-serif; border: 1px solid transparent; transition: background 0.12s;
+}
+.sbtn i { font-size: 16px; }
+.sbtn.primary { background: #39ff9a; color: #070a0e; }
+.sbtn.secondary { background: #101520; border-color: #182030; color: #4a6080; }
+
+/* ── DESKTOP ── */
+.desktop {
+  width: 900px; height: 600px;
+  display: flex; background: #0c0e12; border-radius: 16px;
+  border: 1.5px solid #1a2035; overflow: hidden;
+  box-shadow: 0 40px 120px rgba(0,0,0,0.6);
+}
+.dsidebar {
+  width: 230px; flex-shrink: 0; background: #09090d;
+  border-right: 1px solid #0f1420; display: flex; flex-direction: column;
+}
+.dlogo {
+  padding: 18px 16px 14px; display: flex; align-items: center; gap: 10px;
+  border-bottom: 1px solid #0d1018;
+}
+.dlogo-mark {
+  width: 30px; height: 30px; border-radius: 9px;
+  background: linear-gradient(135deg, #39ff9a 0%, #0ea5e9 100%);
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 700; color: #060a0e;
+}
+.dlogo-text { display: flex; flex-direction: column; }
+.dlogo-name { font-family: 'IBM Plex Mono', monospace; font-size: 12px; color: #3a5070; font-weight: 500; }
+.dconn { display: flex; align-items: center; gap: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 9px; color: #39ff9a; margin-top: 1px; }
+
+.dnav { flex: 1; padding: 12px 10px; display: flex; flex-direction: column; gap: 1px; overflow-y: auto; }
+.dnav::-webkit-scrollbar { display: none; }
+.dnav-sec {
+  font-size: 9px; font-family: 'IBM Plex Mono', monospace; text-transform: uppercase;
+  letter-spacing: 0.12em; color: #1e2840; padding: 10px 8px 4px;
+}
+.dnavbtn {
+  display: flex; align-items: center; gap: 9px; padding: 8px 10px;
+  border-radius: 9px; cursor: pointer; color: #2e4060; font-size: 13px; font-weight: 500;
+  border: none; background: none; width: 100%; text-align: left; font-family: 'DM Sans', sans-serif;
+  transition: background 0.12s, color 0.12s;
+}
+.dnavbtn i { font-size: 17px; }
+.dnavbtn:hover { background: #101520; color: #5070a0; }
+.dnavbtn.active { background: #0b1a12; color: #39ff9a; }
+
+.dnavsession {
+  display: flex; flex-direction: column; gap: 2px; padding: 7px 10px; border-radius: 9px;
+  cursor: pointer; border: none; background: none; width: 100%; text-align: left;
+  transition: background 0.12s;
+}
+.dnavsession:hover { background: #101520; }
+.dnavsession.active { background: #0b1a12; }
+.dns-name { font-size: 12px; font-weight: 600; color: #5070a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dnavsession.active .dns-name { color: #7be8b8; }
+.dns-meta { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: #2a3450; display: flex; align-items: center; gap: 4px; }
+.msdot { width: 5px; height: 5px; border-radius: 50%; }
+.msdot.green { background: #39ff9a; }
+.msdot.amber { background: #f59e0b; }
+.msdot.gray { background: #1e2840; }
+
+.dbottom { padding: 10px; border-top: 1px solid #0d1018; }
+
+.dmain { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.dmain-header {
+  padding: 14px 22px 12px; border-bottom: 1px solid #0f1420;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.dmain-title { font-size: 20px; font-weight: 700; color: #e8ecf5; letter-spacing: -0.5px; }
+.dmain-sub { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: #2e3d58; margin-top: 2px; }
+.dmain-actions { display: flex; align-items: center; gap: 6px; }
+.dact {
+  height: 30px; padding: 0 12px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px;
+  cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; transition: background 0.12s;
+}
+.dact i { font-size: 13px; }
+.dact.ghost { background: #101520; border: 1px solid #182030; color: #4a6080; }
+.dact.ghost:hover { background: #141824; }
+.dact.icon-only { padding: 0; width: 30px; justify-content: center; }
+
+.dmessages { flex: 1; overflow-y: auto; padding: 16px 22px; display: flex; flex-direction: column; gap: 14px; }
+.dmessages::-webkit-scrollbar { width: 4px; }
+.dmessages::-webkit-scrollbar-track { background: transparent; }
+.dmessages::-webkit-scrollbar-thumb { background: #182030; border-radius: 2px; }
+
+.dcomposer { padding: 10px 20px 16px; border-top: 1px solid #0f1420; flex-shrink: 0; }
+.dcomposer-box {
+  background: #101520; border: 1px solid #182030;
+  border-radius: 12px; display: flex; align-items: flex-end; gap: 10px; padding: 12px 14px;
+}
+.dcomposer-box:focus-within { border-color: rgba(57,255,154,0.2); }
+.dctarea {
+  flex: 1; background: none; border: none; outline: none;
+  font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: #8090b0;
+  resize: none; min-height: 22px; max-height: 120px; line-height: 1.55;
+}
+.dctarea::placeholder { color: #2a3450; }
+.dcsend {
+  width: 32px; height: 32px; border-radius: 9px; background: #39ff9a; border: none;
+  color: #070a0e; font-size: 15px; display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0;
+}
+.dcomposer-meta { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; padding: 0 2px; }
+.dcmhint { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: #1e2840; }
+.dcmpills { display: flex; gap: 4px; }
+.dcmpill {
+  font-size: 10px; font-family: 'IBM Plex Mono', monospace; padding: 2px 8px;
+  background: #101520; border: 1px solid #182030; border-radius: 4px; color: #2a3450; cursor: pointer;
+}
+
+/* ── SESSIONS: desktop list view ── */
+.dsessions-main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+.dsessions-header {
+  padding: 14px 22px 12px; border-bottom: 1px solid #0f1420;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.dsessions-body { flex: 1; overflow-y: auto; padding: 16px 22px; }
+.dsessions-body::-webkit-scrollbar { width: 4px; }
+.dsessions-body::-webkit-scrollbar-track { background: transparent; }
+.dsessions-body::-webkit-scrollbar-thumb { background: #182030; border-radius: 2px; }
+.dcard {
+  background: #101520; border: 1px solid #182030; border-radius: 12px;
+  padding: 14px 16px; margin-bottom: 8px; cursor: pointer;
+  display: flex; gap: 12px; align-items: flex-start;
+  transition: border-color 0.12s;
+}
+.dcard.running { background: #0b1812; border-color: #173028; }
+.dcard.ask { background: #120f04; border-color: #2a2008; }
+.dcard:hover { border-color: #222d48; }
+.dcard-info { flex: 1; min-width: 0; }
+.dcard-name { font-size: 14px; font-weight: 600; color: #b0bcd0; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcard.running .dcard-name { color: #7be8b8; }
+.dcard.ask .dcard-name { color: #f0c060; }
+.dcard-path { font-size: 11px; font-family: 'IBM Plex Mono', monospace; color: #2a3450; margin-bottom: 7px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcard-time { font-size: 10px; font-family: 'IBM Plex Mono', monospace; color: #2a3450; padding-top: 2px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════
+  SECTION: MOBILE
+════════════════════════════════════ -->
+<h2 class="section-sep">Mobile — bottom tab navigation &nbsp; (3 tabs + push navigation for chat)</h2>
+
+<div class="phone-row">
+
+  <!-- PHONE 1: SESSIONS LIST -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <div class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-battery-2"></i></div>
+      </div>
+      <div class="screen">
+        <div class="nav-header">
+          <div>
+            <div class="nav-title">Sessions</div>
+            <div class="nav-sub">192.168.1.42 · connected</div>
+          </div>
+          <div class="nav-action"><i class="ti ti-adjustments-horizontal"></i></div>
+        </div>
+        <div class="new-row">
+          <input class="new-input" placeholder="~/projects/new-app (optional)" />
+          <button class="new-btn"><i class="ti ti-plus"></i>New</button>
+        </div>
+        <div class="list">
+          <div class="list-section" style="margin-bottom:8px;">Running · 2</div>
+          <div class="scard running">
+            <div class="sdot green"></div>
+            <div class="scard-info">
+              <div class="scard-name">API refactor + tests</div>
+              <div class="scard-path">~/projects/api-server</div>
+              <div class="tags"><span class="tag running">running</span><span class="tag model">opus-4</span></div>
+            </div>
+            <i class="ti ti-chevron-right scard-chevron"></i>
+          </div>
+          <div class="scard ask">
+            <div class="sdot amber"></div>
+            <div class="scard-info">
+              <div class="scard-name">Auth middleware</div>
+              <div class="scard-path">~/projects/auth</div>
+              <div class="tags"><span class="tag ask">awaiting you</span></div>
+            </div>
+            <i class="ti ti-chevron-right scard-chevron"></i>
+          </div>
+          <div class="list-section" style="margin: 10px 0 8px;">Recent</div>
+          <div class="scard">
+            <div class="sdot gray"></div>
+            <div class="scard-info">
+              <div class="scard-name">Frontend dashboard</div>
+              <div class="scard-path">~/projects/dashboard</div>
+              <div class="tags"><span class="tag idle">idle</span><span class="tag model">sonnet-4</span></div>
+            </div>
+            <i class="ti ti-chevron-right scard-chevron"></i>
+          </div>
+          <div class="scard">
+            <div class="sdot gray"></div>
+            <div class="scard-info">
+              <div class="scard-name">DB migration</div>
+              <div class="scard-path">~/data/migrations</div>
+              <div class="tags"><span class="tag idle">idle</span></div>
+            </div>
+            <i class="ti ti-chevron-right scard-chevron"></i>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-item active" aria-label="Sessions">
+            <div class="tab-icon badge"><i class="ti ti-terminal-2"></i></div>
+            <span class="tab-label">Sessions</span>
+          </button>
+          <button class="tab-item" aria-label="Chat">
+            <div class="tab-icon"><i class="ti ti-message-2"></i></div>
+            <span class="tab-label">Chat</span>
+          </button>
+          <button class="tab-item" aria-label="Settings">
+            <div class="tab-icon"><i class="ti ti-settings"></i></div>
+            <span class="tab-label">Settings</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Sessions</div>
+  </div>
+
+  <!-- PHONE 2: CHAT (push screen — no tab bar) -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <div class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-battery-2"></i></div>
+      </div>
+      <div class="screen">
+        <div class="chat-header">
+          <div class="back-btn"><i class="ti ti-chevron-left"></i></div>
+          <div class="chat-hinfo">
+            <div class="chat-htitle">API refactor + tests</div>
+            <div class="chat-hsub">~/projects/api · opus-4 · auto</div>
+          </div>
+          <div class="chat-hbadges">
+            <div class="running-pill"><div class="rpulse"></div>running</div>
+            <div class="stop-btn"><i class="ti ti-player-stop-filled"></i></div>
+          </div>
+        </div>
+        <div class="messages">
+          <div class="brow user">
+            <div class="avatar me">ME</div>
+            <div class="bcol">
+              <div class="brole">you</div>
+              <div class="bubble">Refactor auth middleware to async/await. Add unit tests for all edge cases.</div>
+            </div>
+          </div>
+          <div class="brow ai">
+            <div class="avatar ai">AI</div>
+            <div class="bcol">
+              <div class="brole">opencode</div>
+              <div class="bubble">
+                I'll refactor and add comprehensive tests. Reading current implementation first.
+                <div class="tool-row"><i class="ti ti-file-code"></i>read_file · middleware/auth.ts</div>
+                <div class="tool-row" style="margin-top:4px;"><i class="ti ti-pencil"></i>write_file · middleware/auth.ts</div>
+                <div class="code-snip">async function auth(req, res, next) {
+  try {
+    const token = req.headers
+      .authorization?.split(' ')[1]
+    if (!token) throw new AuthError()
+    req.user = await verifyToken(token)
+    next()
+  } catch (err) { next(err) }
+}</div>
+              </div>
+            </div>
+          </div>
+          <div class="brow ai">
+            <div class="avatar ai">AI</div>
+            <div class="bcol">
+              <div class="brole">opencode</div>
+              <div class="typing"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>
+            </div>
+          </div>
+        </div>
+        <div class="composer">
+          <div class="composer-box">
+            <textarea class="ctextarea" placeholder="message… (/ for commands)" rows="1"></textarea>
+            <button class="csend"><i class="ti ti-send"></i></button>
+          </div>
+          <div class="composer-hints">
+            <span class="chint">/ commands · ⇧↵ newline</span>
+            <div class="cpills">
+              <div class="cpill">opus-4</div>
+              <div class="cpill">auto</div>
+            </div>
+          </div>
+        </div>
+        <!-- ← No tab bar: this is a push (drill-down) screen, back chevron returns to Sessions -->
+      </div>
+    </div>
+    <div class="phone-label">Chat — push screen ↑ back to Sessions</div>
+  </div>
+
+  <!-- PHONE 3: SETTINGS -->
+  <div class="phone-col">
+    <div class="phone">
+      <div class="status-bar">
+        <span class="sb-time">9:41</span>
+        <div class="sb-icons"><i class="ti ti-wifi"></i><i class="ti ti-battery-2"></i></div>
+      </div>
+      <div class="screen">
+        <div class="nav-header" style="padding-bottom:8px;">
+          <div><div class="nav-title">Settings</div></div>
+        </div>
+        <div class="settings-scroll">
+          <div class="conn-banner"><div class="rpulse"></div>Connected · opencode v0.1.152</div>
+          <div class="sgroup">
+            <div class="sgroup-label">Server</div>
+            <div class="sfield">
+              <div class="sfield-row">
+                <div><div class="sfl">Host</div><div class="sfs">IP address or hostname</div></div>
+                <input class="sfield-input" value="192.168.1.42" />
+              </div>
+              <div class="sfield-row">
+                <div><div class="sfl">Port</div></div>
+                <input class="sfield-input" value="4242" />
+              </div>
+              <div class="sfield-row">
+                <div><div class="sfl">Username</div></div>
+                <input class="sfield-input" value="opencode" />
+              </div>
+              <div class="sfield-row">
+                <div><div class="sfl">Password</div></div>
+                <input class="sfield-input" type="password" value="••••••" />
+              </div>
+            </div>
+            <div class="sbtn-row">
+              <button class="sbtn secondary"><i class="ti ti-plug"></i>Test</button>
+              <button class="sbtn primary"><i class="ti ti-device-floppy"></i>Save</button>
+            </div>
+          </div>
+          <div class="sgroup">
+            <div class="sgroup-label">Preferences</div>
+            <div class="sfield">
+              <div class="sfield-row">
+                <div><div class="sfl">Dark mode</div></div>
+                <button class="stoggle on" onclick="this.classList.toggle('on')" aria-label="Dark mode"></button>
+              </div>
+              <div class="sfield-row">
+                <div><div class="sfl">Completion sound</div><div class="sfs">Alert when session finishes</div></div>
+                <button class="stoggle on" onclick="this.classList.toggle('on')" aria-label="Sound"></button>
+              </div>
+              <div class="sfield-row">
+                <div><div class="sfl">Auto-scroll</div></div>
+                <button class="stoggle" onclick="this.classList.toggle('on')" aria-label="Auto-scroll"></button>
+              </div>
+            </div>
+          </div>
+          <div class="sgroup">
+            <div class="sgroup-label">About</div>
+            <div class="sfield">
+              <div class="sfield-row"><div class="sfl" style="color:#2e3d58;">OpenCode Remote</div><div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#1e2840;">v1.2.0</div></div>
+              <div class="sfield-row" style="cursor:pointer;"><div class="sfl" style="color:#2e3d58;">Help &amp; docs</div><i class="ti ti-chevron-right" style="color:#2a3450;font-size:16px;"></i></div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <button class="tab-item" aria-label="Sessions">
+            <div class="tab-icon badge"><i class="ti ti-terminal-2"></i></div>
+            <span class="tab-label">Sessions</span>
+          </button>
+          <button class="tab-item" aria-label="Chat">
+            <div class="tab-icon"><i class="ti ti-message-2"></i></div>
+            <span class="tab-label">Chat</span>
+          </button>
+          <button class="tab-item active" aria-label="Settings">
+            <div class="tab-icon"><i class="ti ti-settings"></i></div>
+            <span class="tab-label">Settings</span>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="phone-label">Settings</div>
+  </div>
+
+</div>
+
+<!-- ═══════════════════════════════════
+  SECTION: DESKTOP
+════════════════════════════════════ -->
+<h2 class="section-sep">Desktop — persistent sidebar + main content</h2>
+
+<!-- DESKTOP: SESSIONS VIEW -->
+<div class="desktop">
+  <div class="dsidebar">
+    <div class="dlogo">
+      <div class="dlogo-mark">OC</div>
+      <div class="dlogo-text">
+        <div class="dlogo-name">opencode remote</div>
+        <div class="dconn"><div class="rpulse"></div>connected</div>
+      </div>
+    </div>
+    <div class="dnav">
+      <div class="dnav-sec">Navigate</div>
+      <button class="dnavbtn active" aria-label="Sessions"><i class="ti ti-terminal-2"></i>Sessions</button>
+      <button class="dnavbtn" aria-label="Help"><i class="ti ti-help-circle"></i>Help</button>
+      <div class="dnav-sec" style="margin-top:6px;">Active</div>
+      <button class="dnavsession" style="background:#0b1a12;">
+        <div class="dns-name" style="color:#7be8b8;">API refactor + tests</div>
+        <div class="dns-meta"><div class="msdot green"></div>running</div>
+      </button>
+      <button class="dnavsession">
+        <div class="dns-name" style="color:#d0a030;">Auth middleware</div>
+        <div class="dns-meta"><div class="msdot amber"></div>awaiting you</div>
+      </button>
+      <div class="dnav-sec" style="margin-top:6px;">Recent</div>
+      <button class="dnavsession">
+        <div class="dns-name">Frontend dashboard</div>
+        <div class="dns-meta"><div class="msdot gray"></div>idle</div>
+      </button>
+      <button class="dnavsession">
+        <div class="dns-name">DB migration</div>
+        <div class="dns-meta"><div class="msdot gray"></div>idle</div>
+      </button>
+    </div>
+    <div class="dbottom">
+      <button class="dnavbtn" style="width:100%;" aria-label="Settings"><i class="ti ti-settings"></i>Settings</button>
+    </div>
+  </div>
+  <div class="dsessions-main">
+    <div class="dsessions-header">
+      <div>
+        <div class="dmain-title">Sessions</div>
+        <div class="dmain-sub">192.168.1.42:4242 · 4 sessions · 2 running</div>
+      </div>
+      <div class="dmain-actions">
+        <button class="dact ghost"><i class="ti ti-search"></i>Filter</button>
+        <button class="dact ghost" style="background:#102018;border-color:#1a4030;color:#39ff9a;"><i class="ti ti-plus"></i>New Session</button>
+      </div>
+    </div>
+    <div class="dsessions-body">
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#2a3450;margin-bottom:10px;text-transform:uppercase;letter-spacing:0.1em;">Running · 2</div>
+      <div class="dcard running">
+        <div class="sdot green" style="margin-top:3px;"></div>
+        <div class="dcard-info">
+          <div class="dcard-name">API refactor + tests</div>
+          <div class="dcard-path">~/projects/api-server</div>
+          <div class="tags"><span class="tag running">running</span><span class="tag model">claude-opus-4</span></div>
+        </div>
+        <div class="dcard-time">2 min ago</div>
+      </div>
+      <div class="dcard ask">
+        <div class="sdot amber" style="margin-top:3px;"></div>
+        <div class="dcard-info">
+          <div class="dcard-name">Auth middleware</div>
+          <div class="dcard-path">~/projects/auth</div>
+          <div class="tags"><span class="tag ask">awaiting you</span></div>
+        </div>
+        <div class="dcard-time">5 min ago</div>
+      </div>
+      <div style="font-size:11px;font-family:'IBM Plex Mono',monospace;color:#2a3450;margin:16px 0 10px;text-transform:uppercase;letter-spacing:0.1em;">Recent</div>
+      <div class="dcard">
+        <div class="sdot gray" style="margin-top:3px;"></div>
+        <div class="dcard-info">
+          <div class="dcard-name">Frontend dashboard</div>
+          <div class="dcard-path">~/projects/dashboard</div>
+          <div class="tags"><span class="tag idle">idle</span><span class="tag model">sonnet-4</span></div>
+        </div>
+        <div class="dcard-time">1 hr ago</div>
+      </div>
+      <div class="dcard">
+        <div class="sdot gray" style="margin-top:3px;"></div>
+        <div class="dcard-info">
+          <div class="dcard-name">DB migration script</div>
+          <div class="dcard-path">~/data/migrations</div>
+          <div class="tags"><span class="tag idle">idle</span></div>
+        </div>
+        <div class="dcard-time">3 hr ago</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DESKTOP: CHAT VIEW -->
+<div class="desktop" style="margin-top:24px;">
+  <div class="dsidebar">
+    <div class="dlogo">
+      <div class="dlogo-mark">OC</div>
+      <div class="dlogo-text">
+        <div class="dlogo-name">opencode remote</div>
+        <div class="dconn"><div class="rpulse"></div>connected</div>
+      </div>
+    </div>
+    <div class="dnav">
+      <div class="dnav-sec">Navigate</div>
+      <button class="dnavbtn" aria-label="Sessions"><i class="ti ti-terminal-2"></i>Sessions</button>
+      <button class="dnavbtn" aria-label="Help"><i class="ti ti-help-circle"></i>Help</button>
+      <div class="dnav-sec" style="margin-top:6px;">Active</div>
+      <button class="dnavsession active">
+        <div class="dns-name">API refactor + tests</div>
+        <div class="dns-meta"><div class="msdot green"></div>running</div>
+      </button>
+      <button class="dnavsession">
+        <div class="dns-name" style="color:#d0a030;">Auth middleware</div>
+        <div class="dns-meta"><div class="msdot amber"></div>awaiting you</div>
+      </button>
+      <div class="dnav-sec" style="margin-top:6px;">Recent</div>
+      <button class="dnavsession">
+        <div class="dns-name">Frontend dashboard</div>
+        <div class="dns-meta"><div class="msdot gray"></div>idle</div>
+      </button>
+    </div>
+    <div class="dbottom">
+      <button class="dnavbtn" style="width:100%;" aria-label="Settings"><i class="ti ti-settings"></i>Settings</button>
+    </div>
+  </div>
+  <div class="dmain">
+    <div class="dmain-header">
+      <div>
+        <div class="dmain-title">API refactor + tests</div>
+        <div class="dmain-sub">~/projects/api-server · claude-opus-4 · auto mode</div>
+      </div>
+      <div class="dmain-actions">
+        <div class="running-pill"><div class="rpulse"></div>running</div>
+        <button class="dact ghost"><i class="ti ti-player-stop"></i>Stop</button>
+        <button class="dact ghost icon-only"><i class="ti ti-refresh"></i></button>
+      </div>
+    </div>
+    <div class="dmessages">
+      <div class="brow user" style="max-width:72%;align-self:flex-end;">
+        <div class="avatar me" style="width:28px;height:28px;font-size:9px;">ME</div>
+        <div class="bcol">
+          <div class="brole" style="text-align:right;">you</div>
+          <div class="bubble" style="font-size:13px;background:#0a1e3a;border-color:#142848;color:#6a9cd0;border-bottom-right-radius:4px;">Refactor auth middleware to async/await and write unit tests for all edge cases.</div>
+        </div>
+      </div>
+      <div class="brow ai" style="max-width:80%;">
+        <div class="avatar ai" style="width:28px;height:28px;font-size:9px;">AI</div>
+        <div class="bcol">
+          <div class="brole">opencode</div>
+          <div class="bubble" style="font-size:13px;border-bottom-left-radius:4px;">
+            I'll refactor the middleware with full async/await and add comprehensive tests covering missing token, invalid token, expired token, and network error scenarios.
+            <div class="tool-row"><i class="ti ti-file-code"></i>read_file · src/middleware/auth.ts</div>
+            <div class="tool-row" style="margin-top:4px;"><i class="ti ti-pencil"></i>write_file · src/middleware/auth.ts</div>
+            <div class="tool-row" style="margin-top:4px;"><i class="ti ti-pencil"></i>write_file · src/middleware/auth.test.ts</div>
+            <div class="code-snip">async function authMiddleware(req, res, next) {
+  try {
+    const token = req.headers
+      .authorization?.split(' ')[1]
+    if (!token) throw new AuthError('Missing token')
+    req.user = await verifyToken(token)
+    next()
+  } catch (err) {
+    next(err)
+  }
+}</div>
+          </div>
+        </div>
+      </div>
+      <div class="brow ai">
+        <div class="avatar ai" style="width:28px;height:28px;font-size:9px;">AI</div>
+        <div class="bcol">
+          <div class="brole">opencode</div>
+          <div class="typing"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="dcomposer">
+      <div class="dcomposer-box">
+        <textarea class="dctarea" placeholder="message opencode… (/ for commands)" rows="1"></textarea>
+        <button class="dcsend"><i class="ti ti-send" style="font-size:15px;"></i></button>
+      </div>
+      <div class="dcomposer-meta">
+        <span class="dcmhint">/ commands &nbsp;·&nbsp; shift+enter for newline</span>
+        <div class="dcmpills">
+          <div class="dcmpill">agent: opus-4</div>
+          <div class="dcmpill">mode: auto</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

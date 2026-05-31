@@ -1,0 +1,221 @@
+import { useEffect, useMemo, useRef, useState } from "react"
+import type { AgentInfo, CommandInfo, MessageEnvelope, ServerConfig, SessionView } from "../types"
+import { api } from "../api"
+
+export function useChat(params: {
+  config: ServerConfig
+  selectedSession: SessionView | null
+  messages: MessageEnvelope[]
+  commands: CommandInfo[]
+  currentAgent: string | null
+  setCurrentAgent: (agent: string | null) => void
+  currentVariant: string | null
+  setCurrentVariant: (variant: string | null) => void
+  sessionInfo: { agent: string | null; model: { providerID: string; modelID: string } | null; variant: string | null }
+  availableVariants: string[]
+  primaryAgents: AgentInfo[]
+  loadSelected: (id: string, dir: string) => Promise<void>
+  refreshSessions: () => Promise<void>
+  createSession: () => Promise<void>
+  setMessages: React.Dispatch<React.SetStateAction<MessageEnvelope[]>>
+  setRuntimeError: (err: string | null) => void
+  prefs: { sound: boolean; autoScroll: boolean }
+}) {
+  const {
+    config,
+    selectedSession,
+    messages,
+    commands,
+    currentAgent,
+    setCurrentAgent,
+    currentVariant,
+    setCurrentVariant,
+    sessionInfo,
+    availableVariants,
+    primaryAgents,
+    loadSelected,
+    refreshSessions,
+    createSession,
+    setMessages,
+    setRuntimeError,
+    prefs
+  } = params
+
+  // ── State ───────────────────────────────────────────────────────
+
+  const [composer, setComposer] = useState("")
+  const [busySending, setBusySending] = useState(false)
+  const [slashOpen, setSlashOpen] = useState(false)
+  const [slashFilter, setSlashFilter] = useState("")
+  const [slashIndex, setSlashIndex] = useState(0)
+
+  // ── Refs ────────────────────────────────────────────────────────
+
+  const messagesRef = useRef<HTMLDivElement | null>(null)
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const completionAudioRef = useRef<HTMLAudioElement | null>(null)
+  const wasRunningRef = useRef(false)
+
+  // ── Derived ─────────────────────────────────────────────────────
+
+  const filteredCommands = useMemo(() => {
+    if (!slashOpen) return []
+    const filter = slashFilter.toLowerCase()
+    return commands.filter((cmd) => cmd.name.toLowerCase().includes(filter))
+  }, [commands, slashFilter, slashOpen])
+
+  // ── Actions ─────────────────────────────────────────────────────
+
+  async function send() {
+    if (!selectedSession) return
+    const text = composer.trim()
+    if (!text) return
+    setComposer("")
+    setSlashOpen(false)
+    if (textareaRef.current) textareaRef.current.style.height = "auto"
+
+    setBusySending(true)
+    setRuntimeError(null)
+    try {
+      if (text.startsWith("/")) {
+        const normalized = text.slice(1)
+        const command = normalized.split(" ")[0]?.trim()
+        const args = normalized.slice(command.length).trim()
+        if (!command) return
+        if (command === "new") {
+          setBusySending(false)
+          await createSession()
+          return
+        }
+        const reply = await api.sendCommand(
+          config,
+          selectedSession.id,
+          command,
+          args,
+          selectedSession.directory,
+          currentAgent ?? undefined,
+          currentVariant ?? undefined
+        )
+        if (reply && reply.info) {
+          if (reply.info.agent) setCurrentAgent(reply.info.agent)
+          setMessages((prev) => [...prev, reply])
+        }
+      } else {
+        const reply = await api.sendPrompt(
+          config,
+          selectedSession.id,
+          text,
+          selectedSession.directory,
+          currentAgent ?? undefined,
+          currentVariant ?? undefined
+        )
+        if (reply && reply.info && reply.info.agent) {
+          setCurrentAgent(reply.info.agent)
+        }
+      }
+      await loadSelected(selectedSession.id, selectedSession.directory)
+      await refreshSessions()
+    } catch (err) {
+      setRuntimeError((err as Error).message)
+    } finally {
+      setBusySending(false)
+    }
+  }
+
+  function handleSlashSelect(cmd: CommandInfo) {
+    setComposer(`/${cmd.name} `)
+    setSlashOpen(false)
+    setSlashFilter("")
+    setSlashIndex(0)
+    setTimeout(() => textareaRef.current?.focus(), 0)
+  }
+
+  function cycleAgent() {
+    if (primaryAgents.length === 0) return
+    const current = currentAgent ?? sessionInfo.agent ?? primaryAgents[0].name
+    const idx = primaryAgents.findIndex((a) => a.name === current)
+    const next = primaryAgents[(idx + 1) % primaryAgents.length]
+    setCurrentAgent(next.name)
+  }
+
+  function cycleVariant() {
+    if (availableVariants.length === 0) return
+    if (!currentVariant) {
+      setCurrentVariant(availableVariants[0])
+      return
+    }
+    const idx = availableVariants.indexOf(currentVariant)
+    if (idx === -1 || idx === availableVariants.length - 1) {
+      setCurrentVariant(null)
+    } else {
+      setCurrentVariant(availableVariants[idx + 1])
+    }
+  }
+
+  async function abortSession() {
+    if (!selectedSession) return
+    try {
+      await api.abort(config, selectedSession.id)
+      await refreshSessions()
+      await loadSelected(selectedSession.id, selectedSession.directory)
+    } catch (err) {
+      setRuntimeError((err as Error).message)
+    }
+  }
+
+  // ── Effects ─────────────────────────────────────────────────────
+
+  // Initialize completion audio element once
+  useEffect(() => {
+    completionAudioRef.current = new Audio("/audio/staplebops-01.aac")
+    completionAudioRef.current.preload = "auto"
+  }, [])
+
+  // Auto-scroll to bottom when messages change (if autoScroll enabled)
+  useEffect(() => {
+    if (!prefs.autoScroll) return
+    window.scrollTo(0, document.body.scrollHeight)
+  }, [messages.length, busySending, prefs.autoScroll])
+
+  // Play completion sound when a running session transitions to idle
+  useEffect(() => {
+    if (!selectedSession) {
+      wasRunningRef.current = false
+      return
+    }
+    const runningNow = ["busy", "retry"].includes(selectedSession.status)
+    if (wasRunningRef.current && !runningNow) {
+      const audio = completionAudioRef.current
+      if (audio && prefs.sound) {
+        audio.currentTime = 0
+        audio.play().catch(() => undefined)
+      }
+    }
+    wasRunningRef.current = runningNow
+  }, [selectedSession?.id, selectedSession?.status, prefs.sound])
+
+  // ── Return ──────────────────────────────────────────────────────
+
+  return {
+    composer,
+    setComposer,
+    busySending,
+    setBusySending,
+    slashOpen,
+    setSlashOpen,
+    slashFilter,
+    setSlashFilter,
+    slashIndex,
+    setSlashIndex,
+    messagesRef,
+    textareaRef,
+    completionAudioRef,
+    wasRunningRef,
+    filteredCommands,
+    send,
+    handleSlashSelect,
+    cycleAgent,
+    cycleVariant,
+    abortSession
+  }
+}

@@ -1,0 +1,231 @@
+import type { ServerConfig } from "../types"
+
+type NoticeType = "info" | "success" | "error"
+
+type SettingsScreenProps = {
+  theme: "dark" | "light"
+  setTheme: (t: "dark" | "light") => void
+  draftConfig: ServerConfig
+  setDraftConfig: (c: ServerConfig) => void
+  connectedVersion: string
+  settingsNotice: { type: NoticeType; text: string } | null
+  testingConnection: boolean
+  prefs: { sound: boolean; autoScroll: boolean }
+  setPrefs: (p: { sound: boolean; autoScroll: boolean }) => void
+  saveConfig: () => void
+  testConnection: (c: ServerConfig) => Promise<void>
+  onOpenHelp: () => void
+}
+
+export default function SettingsScreen({
+  theme,
+  setTheme,
+  draftConfig,
+  setDraftConfig,
+  connectedVersion,
+  settingsNotice,
+  testingConnection,
+  prefs,
+  setPrefs,
+  saveConfig,
+  testConnection,
+  onOpenHelp
+}: SettingsScreenProps) {
+  const isConnected = Boolean(connectedVersion)
+
+  return (
+    <div className="app-screen">
+      {/* Nav header */}
+      <div className="nav-header" style={{ paddingBottom: "8px" }}>
+        <div>
+          <div className="nav-title">Settings</div>
+        </div>
+      </div>
+
+      <div className="settings-scroll">
+        {/* Connection banner */}
+        {isConnected ? (
+          <div className="conn-banner">
+            <div className="rpulse"></div>
+            Connected · opencode v{connectedVersion}
+          </div>
+        ) : (
+          <div
+            className="conn-banner"
+            style={{ background: "#1a0a0a", borderColor: "#3a1010", color: "#d04040" }}
+          >
+            <i className="ti ti-plug-off"></i>
+            Disconnected
+          </div>
+        )}
+
+        {/* Server group */}
+        <div className="sgroup">
+          <div className="sgroup-label">Server</div>
+          <div className="sfield">
+            <div className="sfield-row">
+              <div>
+                <div className="sfl">Host</div>
+                <div className="sfs">IP address or hostname</div>
+              </div>
+              <input
+                className="sfield-input"
+                value={draftConfig.host}
+                onChange={(e) => setDraftConfig({ ...draftConfig, host: e.target.value })}
+                placeholder="192.168.1.42"
+              />
+            </div>
+            <div className="sfield-row">
+              <div>
+                <div className="sfl">Port</div>
+              </div>
+              <input
+                className="sfield-input"
+                type="number"
+                value={draftConfig.port}
+                onChange={(e) => setDraftConfig({ ...draftConfig, port: Number(e.target.value || 0) })}
+                placeholder="4096"
+              />
+            </div>
+            <div className="sfield-row">
+              <div>
+                <div className="sfl">Username</div>
+              </div>
+              <input
+                className="sfield-input"
+                value={draftConfig.username}
+                onChange={(e) => setDraftConfig({ ...draftConfig, username: e.target.value })}
+                placeholder="opencode"
+              />
+            </div>
+            <div className="sfield-row">
+              <div>
+                <div className="sfl">Password</div>
+              </div>
+              <input
+                className="sfield-input"
+                type="password"
+                value={draftConfig.password}
+                onChange={(e) => setDraftConfig({ ...draftConfig, password: e.target.value })}
+                placeholder="••••••"
+              />
+            </div>
+          </div>
+          <div className="sbtn-row">
+            <button
+              className="sbtn secondary"
+              disabled={testingConnection}
+              onClick={() => { testConnection(draftConfig).catch(() => undefined) }}
+            >
+              <i className="ti ti-plug"></i>
+              Test
+            </button>
+            <button
+              className="sbtn primary"
+              disabled={testingConnection}
+              onClick={saveConfig}
+            >
+              <i className="ti ti-device-floppy"></i>
+              Save
+            </button>
+          </div>
+        </div>
+
+        {/* Preferences group */}
+        <div className="sgroup">
+          <div className="sgroup-label">Preferences</div>
+          <div className="sfield">
+            <div className="sfield-row">
+              <div>
+                <div className="sfl">Dark mode</div>
+              </div>
+              <button
+                className={`stoggle${theme === "dark" ? " on" : ""}`}
+                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+                aria-label="Dark mode"
+              ></button>
+            </div>
+            <div className="sfield-row">
+              <div>
+                <div className="sfl">Completion sound</div>
+                <div className="sfs">Alert when session finishes</div>
+              </div>
+              <button
+                className={`stoggle${prefs.sound ? " on" : ""}`}
+                onClick={() => setPrefs({ ...prefs, sound: !prefs.sound })}
+                aria-label="Sound"
+              ></button>
+            </div>
+            <div className="sfield-row">
+              <div>
+                <div className="sfl">Auto-scroll</div>
+              </div>
+              <button
+                className={`stoggle${prefs.autoScroll ? " on" : ""}`}
+                onClick={() => setPrefs({ ...prefs, autoScroll: !prefs.autoScroll })}
+                aria-label="Auto-scroll"
+              ></button>
+            </div>
+          </div>
+        </div>
+
+        {/* About group */}
+        <div className="sgroup">
+          <div className="sgroup-label">About</div>
+          <div className="sfield">
+            <div className="sfield-row">
+              <div className="sfl" style={{ color: "#2e3d58" }}>OpenCode Remote</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "11px", color: "#1e2840" }}>
+                v1.2.0
+              </div>
+            </div>
+            <div
+              className="sfield-row"
+              style={{ cursor: "pointer" }}
+              onClick={onOpenHelp}
+            >
+              <div className="sfl" style={{ color: "#2e3d58" }}>Help &amp; docs</div>
+              <i className="ti ti-chevron-right" style={{ color: "#2a3450", fontSize: "16px" }}></i>
+            </div>
+          </div>
+        </div>
+
+        {/* Settings notice */}
+        {settingsNotice && (
+          <div
+            className={`notice ${settingsNotice.type} fade-in`}
+            style={{
+              padding: "10px 14px",
+              borderRadius: "10px",
+              fontSize: "11px",
+              fontFamily: "'IBM Plex Mono', monospace",
+              marginBottom: "12px",
+              background: settingsNotice.type === "success"
+                ? "#0a1c12"
+                : settingsNotice.type === "error"
+                ? "#1a0a0a"
+                : "#0a1420",
+              border: `1px solid ${
+                settingsNotice.type === "success"
+                  ? "#1a4030"
+                  : settingsNotice.type === "error"
+                  ? "#3a1010"
+                  : "#1a2840"
+              }`,
+              color: settingsNotice.type === "success"
+                ? "#39ff9a"
+                : settingsNotice.type === "error"
+                ? "#d04040"
+                : "#4a8ad0"
+            }}
+          >
+            {settingsNotice.type === "success" && <i className="ti ti-circle-check" style={{ marginRight: "4px" }}></i>}
+            {settingsNotice.type === "error" && <i className="ti ti-alert-circle" style={{ marginRight: "4px" }}></i>}
+            {settingsNotice.type === "info" && <i className="ti ti-info-circle" style={{ marginRight: "4px" }}></i>}
+            {settingsNotice.text}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
