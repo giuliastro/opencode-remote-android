@@ -1,4 +1,4 @@
-import type { MessageEnvelope, SessionView, TodoItem, AgentInfo, CommandInfo, ProviderInfo } from "../types"
+import type { MessageEnvelope, SessionView, TodoItem, CommandInfo, ProviderInfo } from "../types"
 import { renderInline, toDisplayLines } from "../components/message/messageHelpers"
 import ToolPartDisplay from "../components/message/ToolPart"
 import ReasoningPartDisplay from "../components/message/ReasoningPart"
@@ -38,8 +38,6 @@ type ChatScreenProps = {
   todosExpanded: boolean
   setTodosExpanded: (v: boolean) => void
   sessionInfo: SessionInfo
-  availableVariants: string[]
-  primaryAgents: AgentInfo[]
   runtimeError: string | null
   onBack: () => void
   isWorking: boolean
@@ -56,12 +54,8 @@ type ChatScreenProps = {
   setSlashIndex: (v: number) => void
   filteredCommands: CommandInfo[]
   handleSlashSelect: (cmd: CommandInfo) => void
-  cycleAgent: () => void
-  cycleVariant: () => void
   messagesRef: React.RefObject<HTMLDivElement | null>
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
-  currentAgent: string | null
-  currentVariant: string | null
   providers: ProviderInfo[]
   selectModel: (modelID: string) => Promise<void>
 }
@@ -75,8 +69,6 @@ export default function ChatScreen({
   todosExpanded,
   setTodosExpanded,
   sessionInfo,
-  availableVariants,
-  primaryAgents,
   runtimeError,
   onBack,
   isWorking,
@@ -92,12 +84,8 @@ export default function ChatScreen({
   setSlashIndex,
   filteredCommands,
   handleSlashSelect,
-  cycleAgent,
-  cycleVariant,
   messagesRef,
   textareaRef,
-  currentAgent,
-  currentVariant,
   providers,
   selectModel
 }: ChatScreenProps) {

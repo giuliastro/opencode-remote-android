@@ -105,8 +105,6 @@ function App() {
           todosExpanded={sd.todosExpanded}
           setTodosExpanded={sd.setTodosExpanded}
           sessionInfo={sd.sessionInfo}
-          availableVariants={sd.availableVariants}
-          primaryAgents={sd.primaryAgents}
           runtimeError={sd.runtimeError}
           onBack={() => {
             setChatOpen(false)
@@ -125,12 +123,8 @@ function App() {
           setSlashIndex={chat.setSlashIndex}
           filteredCommands={chat.filteredCommands}
           handleSlashSelect={chat.handleSlashSelect}
-          cycleAgent={chat.cycleAgent}
-          cycleVariant={chat.cycleVariant}
           messagesRef={chat.messagesRef}
           textareaRef={chat.textareaRef}
-          currentAgent={sd.currentAgent}
-          currentVariant={sd.currentVariant}
           providers={sd.providers}
           selectModel={chat.selectModel}
         />
