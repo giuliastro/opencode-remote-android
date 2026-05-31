@@ -52,7 +52,7 @@ export default function SettingsScreen({
         ) : (
           <div
             className="conn-banner"
-            style={{ background: "#1a0a0a", borderColor: "#3a1010", color: "#d04040" }}
+            style={{ background: "var(--surface-danger)", borderColor: "var(--border-danger)", color: "var(--danger)" }}
           >
             <i className="ti ti-plug-off"></i>
             Disconnected
@@ -174,8 +174,8 @@ export default function SettingsScreen({
           <div className="sgroup-label">About</div>
           <div className="sfield">
             <div className="sfield-row">
-              <div className="sfl" style={{ color: "#2e3d58" }}>OpenCode Remote</div>
-              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "11px", color: "#1e2840" }}>
+              <div className="sfl">OpenCode Remote</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: "11px", color: "var(--text-dim)" }}>
                 v1.2.0
               </div>
             </div>
@@ -184,8 +184,8 @@ export default function SettingsScreen({
               style={{ cursor: "pointer" }}
               onClick={onOpenHelp}
             >
-              <div className="sfl" style={{ color: "#2e3d58" }}>Help &amp; docs</div>
-              <i className="ti ti-chevron-right" style={{ color: "#2a3450", fontSize: "16px" }}></i>
+              <div className="sfl">Help &amp; docs</div>
+              <i className="ti ti-chevron-right" style={{ color: "var(--text-muted)", fontSize: "16px" }}></i>
             </div>
           </div>
         </div>
@@ -201,22 +201,22 @@ export default function SettingsScreen({
               fontFamily: "'IBM Plex Mono', monospace",
               marginBottom: "12px",
               background: settingsNotice.type === "success"
-                ? "#0a1c12"
+                ? "var(--tag-run-bg)"
                 : settingsNotice.type === "error"
-                ? "#1a0a0a"
-                : "#0a1420",
+                ? "var(--surface-danger)"
+                : "var(--chat-user-bg)",
               border: `1px solid ${
                 settingsNotice.type === "success"
-                  ? "#1a4030"
+                  ? "var(--tag-run-border)"
                   : settingsNotice.type === "error"
-                  ? "#3a1010"
-                  : "#1a2840"
+                  ? "var(--border-danger)"
+                  : "var(--chat-user-border)"
               }`,
               color: settingsNotice.type === "success"
-                ? "#39ff9a"
+                ? "var(--text-running)"
                 : settingsNotice.type === "error"
-                ? "#d04040"
-                : "#4a8ad0"
+                ? "var(--danger)"
+                : "var(--text-user)"
             }}
           >
             {settingsNotice.type === "success" && <i className="ti ti-circle-check" style={{ marginRight: "4px" }}></i>}

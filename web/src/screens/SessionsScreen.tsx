@@ -122,11 +122,11 @@ export default function SessionsScreen({
         {isPullRefreshing ? (
           <i className="ti ti-refresh ti-spin" style={{ display: "block", textAlign: "center", padding: "8px" }} />
         ) : pullDelta >= PULL_THRESHOLD ? (
-          <span style={{ display: "block", textAlign: "center", fontSize: "11px", color: "#39ff9a", padding: "8px" }}>
+          <span style={{ display: "block", textAlign: "center", fontSize: "11px", color: "var(--accent)", padding: "8px" }}>
             ↑ Release to refresh
           </span>
         ) : (
-          <span style={{ display: "block", textAlign: "center", fontSize: "11px", color: "#2a3450", padding: "8px" }}>
+          <span style={{ display: "block", textAlign: "center", fontSize: "11px", color: "var(--text-muted)", padding: "8px" }}>
             ↓ Pull to refresh
           </span>
         )}
@@ -160,9 +160,9 @@ export default function SessionsScreen({
       {/* Sessions list */}
       <div className="list" ref={sessionsRef}>
         {filteredSessions.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 16px", color: "#2a3450" }}>
+          <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
             <i className="ti ti-terminal-2" style={{ fontSize: "48px", display: "block", marginBottom: "12px", opacity: 0.4 }}></i>
-            <p style={{ fontSize: "14px", fontWeight: 600, color: "#4a6080" }}>No sessions found</p>
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>No sessions found</p>
             <p style={{ fontSize: "11px", marginTop: "4px" }}>Create a new session to get started</p>
           </div>
         ) : (

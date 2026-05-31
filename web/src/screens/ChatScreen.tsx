@@ -140,14 +140,14 @@ export default function ChatScreen({
       {/* Messages */}
       <div className="messages" ref={messagesRef as React.RefObject<HTMLDivElement>}>
         {loadingSessionID === selectedID ? (
-          <div style={{ textAlign: "center", padding: "48px 16px", color: "#2a3450" }}>
+          <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
             <i className="ti ti-loader" style={{ fontSize: "32px", display: "block", marginBottom: "12px" }}></i>
             <p style={{ fontSize: "13px" }}>Loading session...</p>
           </div>
         ) : renderedMessages.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "48px 16px", color: "#2a3450" }}>
+          <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
             <i className="ti ti-message-2" style={{ fontSize: "48px", display: "block", marginBottom: "12px", opacity: 0.4 }}></i>
-            <p style={{ fontSize: "14px", fontWeight: 600, color: "#4a6080" }}>No messages yet</p>
+            <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>No messages yet</p>
             <p style={{ fontSize: "11px", marginTop: "4px" }}>Start a conversation below</p>
           </div>
         ) : (
@@ -257,12 +257,12 @@ export default function ChatScreen({
               cursor: "pointer",
               fontSize: "11px",
               fontFamily: "'IBM Plex Mono', monospace",
-              color: "#2a3450"
+              color: "var(--text-muted)"
             }}
             onClick={() => setTodosExpanded(!todosExpanded)}
           >
             <span>
-              <i className="ti ti-list-check" style={{ marginRight: "4px", color: "#39ff9a" }}></i>
+              <i className="ti ti-list-check" style={{ marginRight: "4px", color: "var(--accent)" }}></i>
               Todo ({todos.length})
             </span>
             <i className={`ti ti-chevron-${todosExpanded ? "up" : "down"}`}></i>
@@ -278,10 +278,10 @@ export default function ChatScreen({
                     gap: "8px",
                     padding: "4px 0",
                     fontSize: "11px",
-                    color: "#4a6080"
+                    color: "var(--text-secondary)"
                   }}
                 >
-                  <span style={{ color: item.status === "completed" ? "#39ff9a" : "#2a3450" }}>
+                  <span style={{ color: item.status === "completed" ? "var(--accent)" : "var(--text-muted)" }}>
                     {item.status === "completed" ? (
                       <i className="ti ti-checkbox"></i>
                     ) : (

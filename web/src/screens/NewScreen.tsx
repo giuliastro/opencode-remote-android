@@ -31,7 +31,7 @@ export default function NewScreen({
               fontWeight: 600,
               textTransform: "uppercase",
               letterSpacing: "0.12em",
-              color: "#2a3450",
+              color: "var(--text-muted)",
               marginBottom: "8px",
               display: "block",
               padding: "0 2px"
@@ -55,11 +55,11 @@ export default function NewScreen({
             style={{
               fontSize: "10px",
               fontFamily: "'IBM Plex Mono', monospace",
-              color: "#2a3450",
+              color: "var(--text-muted)",
               padding: "0 2px"
             }}
           >
-            Server directory: <span style={{ color: "#4a6080" }}>{serverDirectory}</span>
+            Server directory: <span style={{ color: "var(--text-secondary)" }}>{serverDirectory}</span>
           </div>
         )}
 

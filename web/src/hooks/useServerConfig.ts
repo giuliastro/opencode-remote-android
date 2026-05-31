@@ -27,7 +27,7 @@ export function useServerConfig() {
   })
 
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    return (localStorage.getItem(THEME_KEY) as "dark" | "light") ?? "dark"
+    return (localStorage.getItem(THEME_KEY) as "dark" | "light") ?? "light"
   })
 
   const [prefs, setPrefs] = useState<{ sound: boolean; autoScroll: boolean }>(() => {
