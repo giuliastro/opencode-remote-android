@@ -4,9 +4,12 @@ import type {
   CommandInfo,
   DiffFile,
   HealthResponse,
+  McpServer,
   MessageEnvelope,
   PathInfo,
+  Project,
   ProviderResponse,
+  QuestionRequest,
   ServerConfig,
   Session,
   SessionStatus,
@@ -194,10 +197,34 @@ export const api = {
     })
   },
 
-  replyQuestion(config: ServerConfig, requestID: string, directory: string, answers: string[]) {
-    return request<boolean>(config, `/question/${requestID}/reply`, {
+  listQuestions(config: ServerConfig) {
+    return request<QuestionRequest[]>(config, "/question")
+  },
+
+  replyQuestion(config: ServerConfig, requestID: string, directory: string, answers: string[][]) {
+    const path = withDirectory(`/question/${requestID}/reply`, directory)
+    return request<boolean>(config, path, {
       method: "POST",
-      body: { directory, answers }
+      body: { answers }
     })
+  },
+
+  rejectQuestion(config: ServerConfig, requestID: string) {
+    return request<boolean>(config, `/question/${requestID}/reject`, {
+      method: "POST",
+      body: {}
+    })
+  },
+
+  listProjects(config: ServerConfig) {
+    return request<Project[]>(config, "/project")
+  },
+
+  forkSession(config: ServerConfig, sessionID: string) {
+    return request<Session>(config, `/session/${sessionID}/fork`, { method: "POST", body: {} })
+  },
+
+  listMcp(config: ServerConfig) {
+    return request<Record<string, McpServer>>(config, "/mcp")
   }
 }

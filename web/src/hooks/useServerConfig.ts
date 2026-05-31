@@ -58,6 +58,32 @@ export function useServerConfig() {
     localStorage.setItem(PREFS_KEY, JSON.stringify(prefs))
   }, [prefs])
 
+  // Keep connection status in sync on startup and whenever saved config changes.
+  useEffect(() => {
+    if (!config.host || !config.password) {
+      setConnectedVersion("")
+      return
+    }
+
+    let active = true
+
+    ;(async () => {
+      try {
+        const health = await Promise.race([
+          api.health(config),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Connection timed out")), 12000))
+        ])
+        if (active) setConnectedVersion(health.version)
+      } catch {
+        if (active) setConnectedVersion("")
+      }
+    })()
+
+    return () => {
+      active = false
+    }
+  }, [config])
+
   function saveConfig() {
     setConfig(draftConfig)
     localStorage.setItem(STORAGE_KEY, JSON.stringify(draftConfig))
@@ -75,6 +101,7 @@ export function useServerConfig() {
       setConnectedVersion(health.version)
       setSettingsNotice({ type: "success", text: `Connected to OpenCode ${health.version}` })
     } catch (err) {
+      setConnectedVersion("")
       setSettingsNotice({ type: "error", text: `Connection failed: ${(err as Error).message}` })
     } finally {
       setTestingConnection(false)

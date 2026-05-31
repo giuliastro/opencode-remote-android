@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
-import type { AgentInfo, CommandInfo, MessageEnvelope, ProviderInfo, ServerConfig, SessionView, TodoItem } from "../types"
+import type { AgentInfo, CommandInfo, DiffFile, McpServer, MessageEnvelope, Project, ProviderInfo, QuestionRequest, ServerConfig, SessionView, TodoItem } from "../types"
 import { api } from "../api"
 import {
   extractText,
@@ -46,6 +46,10 @@ export function useServerData(config: ServerConfig) {
   const [connectedProviderIDs, setConnectedProviderIDs] = useState<string[]>([])
   const [currentVariant, setCurrentVariant] = useState<string | null>(null)
   const [serverDirectory, setServerDirectory] = useState<string>("")
+  const [projects, setProjects] = useState<Project[]>([])
+  const [mcpServers, setMcpServers] = useState<Record<string, McpServer>>({})
+  const [diff, setDiff] = useState<DiffFile[]>([])
+  const [questions, setQuestions] = useState<QuestionRequest[]>([])
 
   // ── Derived values ──────────────────────────────────────────────
 
@@ -53,16 +57,6 @@ export function useServerData(config: ServerConfig) {
     () => sessions.find((session) => session.id === selectedID) ?? null,
     [sessions, selectedID]
   )
-
-  const filteredSessions = useMemo(() => {
-    const isSubagent = (title: string) => /\(@\S+ subagent\)$/i.test(title)
-    return sessions.filter((session) => {
-      if (isSubagent(session.title)) return false
-      const text = query.trim().toLowerCase()
-      if (!text) return true
-      return session.title.toLowerCase().includes(text) || session.directory.toLowerCase().includes(text)
-    })
-  }, [sessions, query])
 
   const renderedMessages = useMemo(() => {
     return messages
@@ -140,10 +134,13 @@ export function useServerData(config: ServerConfig) {
           id: session.id,
           title: session.title,
           directory: session.directory,
+          projectID: session.projectID,
           updated: session.time.updated,
           status: statuses[session.id]?.type ?? "idle",
           statusMessage: statuses[session.id]?.message,
           requestID: statuses[session.id]?.requestID,
+          cost: session.cost,
+          agent: session.agent,
           files: session.summary?.files ?? 0,
           additions: session.summary?.additions ?? 0,
           deletions: session.summary?.deletions ?? 0
@@ -199,14 +196,46 @@ export function useServerData(config: ServerConfig) {
     }
   }, [config])
 
+  const loadProjects = useCallback(async () => {
+    if (!config.host || !config.password) return
+    try {
+      const list = await api.listProjects(config)
+      setProjects(list)
+    } catch {
+      setProjects([])
+    }
+  }, [config])
+
+  const loadMcp = useCallback(async () => {
+    if (!config.host || !config.password) return
+    try {
+      const result = await api.listMcp(config)
+      setMcpServers(result)
+    } catch {
+      setMcpServers({})
+    }
+  }, [config])
+
+  const loadQuestions = useCallback(async () => {
+    if (!config.host || !config.password) return
+    try {
+      const list = await api.listQuestions(config)
+      setQuestions(list)
+    } catch {
+      setQuestions([])
+    }
+  }, [config])
+
   const loadSelected = useCallback(async (sessionID: string, directory: string) => {
     try {
-      const [msg, todo] = await Promise.all([
+      const [msg, todo, diffFiles] = await Promise.all([
         api.loadMessages(config, sessionID, directory),
-        api.loadTodo(config, sessionID)
+        api.loadTodo(config, sessionID),
+        api.loadDiff(config, sessionID).catch(() => [] as DiffFile[])
       ])
       setMessages(msg)
       setTodos(todo)
+      setDiff(diffFiles)
       const lastUser = [...msg].reverse().find((m) => m.info.role === "user")
       const agent = lastUser?.info?.agent
       if (agent) {
@@ -219,8 +248,8 @@ export function useServerData(config: ServerConfig) {
 
   // ── Session management functions ────────────────────────────────
 
-  const createSession = useCallback(async () => {
-    const folder = newSessionFolder.trim()
+  const createSession = useCallback(async (directory?: string) => {
+    const folder = (directory ?? newSessionFolder).trim()
     try {
       const created = await api.createSession(config, "Mobile session", folder)
       setNewSessionFolder("")
@@ -241,12 +270,35 @@ export function useServerData(config: ServerConfig) {
         setSelectedID(null)
         setMessages([])
         setTodos([])
+        setDiff([])
       }
       await refreshSessions(true)
     } catch (err) {
       setRuntimeError((err as Error).message)
     }
   }, [config, selectedID, refreshSessions])
+
+  const forkSession = useCallback(async (sessionID: string): Promise<string | null> => {
+    try {
+      const forked = await api.forkSession(config, sessionID)
+      await refreshSessions(true)
+      setToast({ type: "success", text: `Forked as "${forked.title}"` })
+      return forked.id
+    } catch (err) {
+      const message = (err as Error).message
+      setToast({ type: "error", text: message })
+      return null
+    }
+  }, [config, refreshSessions])
+
+  const renameSession = useCallback(async (sessionID: string, title: string) => {
+    try {
+      await api.renameSession(config, sessionID, title)
+      await refreshSessions(true)
+    } catch (err) {
+      setToast({ type: "error", text: (err as Error).message })
+    }
+  }, [config, refreshSessions])
 
   // ── Effects ─────────────────────────────────────────────────────
 
@@ -258,8 +310,12 @@ export function useServerData(config: ServerConfig) {
     loadAgents().catch(() => undefined)
     loadProviders().catch(() => undefined)
     loadPath().catch(() => undefined)
+    loadProjects().catch(() => undefined)
+    loadMcp().catch(() => undefined)
+    loadQuestions().catch(() => undefined)
     const timer = setInterval(() => {
       refreshSessions(true).catch(() => undefined)
+      loadQuestions().catch(() => undefined)
       if (selectedSession) {
         loadSelected(selectedSession.id, selectedSession.directory).catch(() => undefined)
       }
@@ -311,8 +367,11 @@ export function useServerData(config: ServerConfig) {
     setCurrentVariant,
     serverDirectory,
     setServerDirectory,
+    projects,
+    mcpServers,
+    diff,
+    questions,
     selectedSession,
-    filteredSessions,
     renderedMessages,
     primaryAgents,
     sessionInfo,
@@ -322,8 +381,12 @@ export function useServerData(config: ServerConfig) {
     loadAgents,
     loadProviders,
     loadPath,
+    loadProjects,
+    loadMcp,
     loadSelected,
     createSession,
-    deleteSession
+    deleteSession,
+    forkSession,
+    renameSession
   }
 }

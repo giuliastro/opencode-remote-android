@@ -3,10 +3,14 @@ import { App as CapApp } from "@capacitor/app"
 import { useServerConfig } from "./hooks/useServerConfig"
 import { useServerData } from "./hooks/useServerData"
 import { useChat } from "./hooks/useChat"
+import ProjectsScreen from "./screens/ProjectsScreen"
 import SessionsScreen from "./screens/SessionsScreen"
 import ChatScreen from "./screens/ChatScreen"
 import SettingsScreen from "./screens/SettingsScreen"
 import HelpScreen from "./screens/HelpScreen"
+import type { Project } from "./types"
+
+type Screen = "projects" | "sessions" | "chat" | "settings" | "help"
 
 function App() {
   const sv = useServerConfig()
@@ -32,11 +36,10 @@ function App() {
     prefs: sv.prefs,
   })
 
-  const [tab, setTab] = useState<"sessions" | "settings">(() =>
-    sv.hasConfiguredServer ? "sessions" : "settings",
+  const [screen, setScreen] = useState<Screen>(() =>
+    sv.hasConfiguredServer ? "projects" : "settings"
   )
-  const [chatOpen, setChatOpen] = useState(false)
-  const [helpOpen, setHelpOpen] = useState(false)
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
 
   const connected = sv.connectedVersion !== ""
 
@@ -44,33 +47,39 @@ function App() {
     sd.selectedSession && ["busy", "retry", "ask", "question", "permission"].includes(sd.selectedSession.status),
   )
 
+  function openProject(project: Project) {
+    setSelectedProject(project)
+    setScreen("sessions")
+  }
+
   function openSession(id: string, dir: string) {
     sd.setSelectedID(id)
     sd.loadSelected(id, dir).catch(() => undefined)
-    setChatOpen(true)
+    setScreen("chat")
+  }
+
+  async function handleCreateSession(directory?: string) {
+    await sd.createSession(directory)
+    setScreen("chat")
   }
 
   function handleSaveConfig() {
     sv.saveConfig()
     sd.setRuntimeError(null)
-    setTab("sessions")
+    setScreen("projects")
   }
 
-  async function handleCreateSession() {
-    await sd.createSession()
-    setChatOpen(true)
-  }
-
-  // ── Android back button ──────────────────────────────────────────
+  // Android back button
   useEffect(() => {
     let listener: { remove: () => void } | null = null
 
     const onBack = () => {
-      if (helpOpen) {
-        setHelpOpen(false)
-      } else if (chatOpen) {
-        setChatOpen(false)
-        setTab("sessions")
+      if (screen === "help") {
+        setScreen("settings")
+      } else if (screen === "chat") {
+        setScreen("sessions")
+      } else if (screen === "sessions") {
+        setScreen("projects")
       }
       // else: default system behaviour
     }
@@ -82,20 +91,11 @@ function App() {
     return () => {
       if (listener) listener.remove()
     }
-  }, [helpOpen, chatOpen])
+  }, [screen])
 
-  return (
-    <div className="app-shell">
-      {sd.toast && (
-        <div
-          className={`toast toast-${sd.toast.type} fade-in`}
-          onClick={() => sd.setToast(null)}
-        >
-          {sd.toast.text}
-        </div>
-      )}
-
-      {chatOpen ? (
+  const renderScreen = () => {
+    if (screen === "chat") {
+      return (
         <ChatScreen
           selectedSession={sd.selectedSession}
           renderedMessages={sd.renderedMessages}
@@ -106,10 +106,8 @@ function App() {
           setTodosExpanded={sd.setTodosExpanded}
           sessionInfo={sd.sessionInfo}
           runtimeError={sd.runtimeError}
-          onBack={() => {
-            setChatOpen(false)
-            setTab("sessions")
-          }}
+          diff={sd.diff}
+          onBack={() => setScreen("sessions")}
           isWorking={isWorking}
           abortSession={chat.abortSession}
           composer={chat.composer}
@@ -134,51 +132,91 @@ function App() {
           currentAgent={sd.currentAgent}
           primaryAgents={sd.primaryAgents}
           cycleAgent={chat.cycleAgent}
+          questions={sd.questions}
           replyPermission={chat.replyPermission}
+          replyQuestion={chat.replyQuestion}
+          rejectQuestion={chat.rejectQuestion}
+          forkSession={sd.forkSession}
+          renameSession={sd.renameSession}
+          onSessionForked={() => setScreen("sessions")}
         />
-      ) : helpOpen ? (
+      )
+    }
+
+    if (screen === "help") {
+      return (
         <HelpScreen
-          onBack={() => setHelpOpen(false)}
+          onBack={() => setScreen("settings")}
           commands={sd.commands}
         />
-      ) : (
-        <>
-          {tab === "sessions" && (
-            <SessionsScreen
-              config={{ host: sv.config.host }}
-              connected={connected}
-              filteredSessions={sd.filteredSessions}
-              selectedID={sd.selectedID}
-              onOpenSession={openSession}
-              query={sd.query}
-              setQuery={sd.setQuery}
-              createSession={handleCreateSession}
-              serverDirectory={sd.serverDirectory}
-              runtimeError={sd.runtimeError}
-              refreshSessions={sd.refreshSessions}
-              onOpenSettings={() => setTab("settings")}
-              deleteSession={sd.deleteSession}
-            />
-          )}
-          {tab === "settings" && (
-            <SettingsScreen
-              theme={sv.theme}
-              setTheme={sv.setTheme}
-              draftConfig={sv.draftConfig}
-              setDraftConfig={sv.setDraftConfig}
-              connectedVersion={sv.connectedVersion}
-              settingsNotice={sv.settingsNotice}
-              testingConnection={sv.testingConnection}
-              prefs={sv.prefs}
-              setPrefs={sv.setPrefs}
-              saveConfig={handleSaveConfig}
-              testConnection={sv.testConnection}
-              onOpenHelp={() => setHelpOpen(true)}
-              onBack={() => setTab("sessions")}
-            />
-          )}
-        </>
+      )
+    }
+
+    if (screen === "settings") {
+      return (
+        <SettingsScreen
+          theme={sv.theme}
+          setTheme={sv.setTheme}
+          draftConfig={sv.draftConfig}
+          setDraftConfig={sv.setDraftConfig}
+          connectedVersion={sv.connectedVersion}
+          settingsNotice={sv.settingsNotice}
+          testingConnection={sv.testingConnection}
+          prefs={sv.prefs}
+          setPrefs={sv.setPrefs}
+          saveConfig={handleSaveConfig}
+          testConnection={sv.testConnection}
+          onOpenHelp={() => setScreen("help")}
+          onBack={() => setScreen(sv.hasConfiguredServer ? "projects" : "settings")}
+          mcpServers={sd.mcpServers}
+        />
+      )
+    }
+
+    if (screen === "sessions" && selectedProject) {
+      return (
+        <SessionsScreen
+          project={selectedProject}
+          sessions={sd.sessions}
+          selectedID={sd.selectedID}
+          onOpenSession={openSession}
+          onBack={() => setScreen("projects")}
+          query={sd.query}
+          setQuery={sd.setQuery}
+          createSession={handleCreateSession}
+          runtimeError={sd.runtimeError}
+          refreshSessions={sd.refreshSessions}
+          deleteSession={sd.deleteSession}
+        />
+      )
+    }
+
+    // Default: projects
+    return (
+      <ProjectsScreen
+        config={{ host: sv.config.host }}
+        connected={connected}
+        projects={sd.projects}
+        sessions={sd.sessions}
+        onOpenProject={openProject}
+        onOpenSettings={() => setScreen("settings")}
+        refreshSessions={sd.refreshSessions}
+        runtimeError={sd.runtimeError}
+      />
+    )
+  }
+
+  return (
+    <div className="app-shell">
+      {sd.toast && (
+        <div
+          className={`toast toast-${sd.toast.type} fade-in`}
+          onClick={() => sd.setToast(null)}
+        >
+          {sd.toast.text}
+        </div>
       )}
+      {renderScreen()}
     </div>
   )
 }

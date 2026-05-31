@@ -14,6 +14,16 @@ export type Session = {
   id: string
   title: string
   directory: string
+  projectID?: string
+  cost?: number
+  tokens?: {
+    input: number
+    output: number
+    reasoning: number
+    cache: { read: number; write: number }
+  }
+  agent?: string
+  model?: { id: string; providerID: string; variant?: string }
   time: {
     created: number
     updated: number
@@ -24,6 +34,17 @@ export type Session = {
     files: number
   }
 }
+
+export type Project = {
+  id: string
+  worktree: string
+  vcs?: string
+  icon?: { color: string }
+  sandboxes: unknown[]
+  time: { created: number; updated: number; initialized?: number }
+}
+
+export type McpServer = { status: string }
 
 export type SessionStatus = {
   type: string
@@ -151,13 +172,35 @@ export type SessionView = {
   id: string
   title: string
   directory: string
+  projectID?: string
   updated: number
   status: string
   statusMessage?: string
   requestID?: string
+  cost?: number
+  agent?: string
   files: number
   additions: number
   deletions: number
+}
+
+export type QuestionOption = {
+  label: string
+  description: string
+}
+
+export type QuestionInfo = {
+  question: string
+  header: string
+  options: QuestionOption[]
+  multiple?: boolean
+  custom?: boolean
+}
+
+export type QuestionRequest = {
+  id: string
+  sessionID: string
+  questions: QuestionInfo[]
 }
 
 export type CommandInfo = {

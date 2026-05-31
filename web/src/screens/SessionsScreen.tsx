@@ -1,34 +1,36 @@
 import { useRef, useState, useEffect, useMemo } from "react"
-import type { SessionView } from "../types"
+import type { Project, SessionView } from "../types"
 import SessionCard from "../components/SessionCard"
 
 type SessionsScreenProps = {
-  config: { host: string }
-  connected: boolean
-  filteredSessions: SessionView[]
+  project: Project
+  sessions: SessionView[]
   selectedID: string | null
   onOpenSession: (id: string, directory: string) => void
+  onBack: () => void
   query: string
   setQuery: (q: string) => void
-  createSession: () => Promise<void>
-  serverDirectory: string
+  createSession: (directory?: string) => Promise<void>
   runtimeError: string | null
   refreshSessions: (silent?: boolean) => Promise<void>
-  onOpenSettings: () => void
   deleteSession: (id: string) => Promise<void>
 }
 
+function projectName(worktree: string): string {
+  const parts = worktree.replace(/\\/g, "/").split("/").filter(Boolean)
+  return parts[parts.length - 1] ?? worktree
+}
+
 export default function SessionsScreen({
-  config,
-  connected,
-  filteredSessions,
+  project,
+  sessions,
   onOpenSession,
+  onBack,
   query,
   setQuery,
   createSession,
   runtimeError,
   refreshSessions,
-  onOpenSettings,
   deleteSession
 }: SessionsScreenProps) {
   const [pullDelta, setPullDelta] = useState(0)
@@ -118,6 +120,18 @@ export default function SessionsScreen({
     }
   }, [refreshSessions])
 
+  // Filter to this project's sessions, excluding subagents
+  const isSubagent = (title: string) => /\(@\S+ subagent\)$/i.test(title)
+  const projectSessions = useMemo(() => {
+    return sessions.filter((s) => {
+      if (isSubagent(s.title)) return false
+      if (s.projectID !== project.id) return false
+      const text = query.trim().toLowerCase()
+      if (!text) return true
+      return s.title.toLowerCase().includes(text) || s.directory.toLowerCase().includes(text)
+    })
+  }, [sessions, project.id, query])
+
   const groupedSections = useMemo(() => {
     const now = new Date()
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
@@ -128,9 +142,9 @@ export default function SessionsScreen({
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime()
     const normalizeTime = (updated: number) => (updated < 1_000_000_000_000 ? updated * 1000 : updated)
 
-    const busy = filteredSessions.filter((s) => s.status === "busy" || s.status === "retry")
-    const actionRequired = filteredSessions.filter((s) => s.status === "ask" || s.status === "question" || s.status === "permission")
-    const rest = filteredSessions.filter((s) => s.status !== "busy" && s.status !== "retry" && s.status !== "ask" && s.status !== "question" && s.status !== "permission")
+    const busy = projectSessions.filter((s) => s.status === "busy" || s.status === "retry")
+    const actionRequired = projectSessions.filter((s) => s.status === "ask" || s.status === "question" || s.status === "permission")
+    const rest = projectSessions.filter((s) => s.status !== "busy" && s.status !== "retry" && s.status !== "ask" && s.status !== "question" && s.status !== "permission")
 
     const sections: Array<{ label: string; sessions: SessionView[] }> = []
     if (busy.length > 0) sections.push({ label: `Busy · ${busy.length}`, sessions: busy })
@@ -163,7 +177,7 @@ export default function SessionsScreen({
     if (older.length > 0) sections.push({ label: `Older · ${older.length}`, sessions: older })
 
     return sections
-  }, [filteredSessions])
+  }, [projectSessions])
 
   return (
     <div className="app-screen">
@@ -188,28 +202,22 @@ export default function SessionsScreen({
         </div>
       ) : (
         <div className="nav-header">
-          <div>
-            <div className="nav-title">Sessions</div>
-            <div className="nav-sub">
-              {config.host} · <span style={{ color: connected ? "var(--online-color)" : "var(--danger)" }}>{connected ? "online" : "offline"}</span>
+          <button className="back-btn" onClick={onBack} aria-label="Back to projects">
+            <i className="ti ti-chevron-left" />
+          </button>
+          <div style={{ flex: 1, minWidth: 0, margin: "0 8px" }}>
+            <div className="nav-title" style={{ fontSize: "22px" }}>{projectName(project.worktree)}</div>
+            <div className="nav-sub" style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {project.worktree}
             </div>
           </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button
-              className="nav-action"
-              aria-label="New session"
-              onClick={() => { createSession().catch(() => undefined) }}
-            >
-              <i className="ti ti-plus" />
-            </button>
-            <button
-              className="nav-action"
-              aria-label="Settings"
-              onClick={onOpenSettings}
-            >
-              <i className="ti ti-settings" />
-            </button>
-          </div>
+          <button
+            className="nav-action"
+            aria-label="New session"
+            onClick={() => { createSession(project.worktree).catch(() => undefined) }}
+          >
+            <i className="ti ti-plus" />
+          </button>
         </div>
       )}
 
@@ -251,7 +259,7 @@ export default function SessionsScreen({
 
       {/* Sessions list */}
       <div className="list" ref={sessionsRef}>
-        {filteredSessions.length === 0 ? (
+        {projectSessions.length === 0 ? (
           <div style={{ textAlign: "center", padding: "48px 16px", color: "var(--text-muted)" }}>
             <i className="ti ti-terminal-2" style={{ fontSize: "48px", display: "block", marginBottom: "12px", opacity: 0.4 }}></i>
             <p style={{ fontSize: "14px", fontWeight: 600, color: "var(--text-secondary)" }}>No sessions found</p>

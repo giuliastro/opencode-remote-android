@@ -97,9 +97,19 @@ export default function SessionCard({ session, onClick, onLongPress, selected, s
         <div className="scard-path">{session.directory}</div>
         <div className="tags">
           {renderStatusTag(session.status, session.statusMessage)}
+          {session.agent && (
+            <span className="tag model">{session.agent}</span>
+          )}
         </div>
       </div>
-      {!selectionMode && <i className="ti ti-chevron-right scard-chevron" />}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4, flexShrink: 0 }}>
+        {!selectionMode && <i className="ti ti-chevron-right scard-chevron" />}
+        {session.cost && session.cost >= 0.001 && (
+          <span className="cost-badge">
+            {session.cost < 0.01 ? `$${session.cost.toFixed(4)}` : `$${session.cost.toFixed(3)}`}
+          </span>
+        )}
+      </div>
     </div>
   )
 }

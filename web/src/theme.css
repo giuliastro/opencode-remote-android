@@ -1,0 +1,230 @@
+/* ================================================
+   OpenCode Remote — Theme File
+   Edit ONLY this file to change colors / fonts
+   across the entire app.
+   ================================================ */
+
+/* ─── Light theme (default) ─── */
+:root {
+  /* Base surfaces */
+  --bg: #e8e4da;
+  --surface: #f5f1ea;
+  --border: #d0c8bc;
+  --border-alt: #d8d0c4;
+  --border-strong: #c8c0b0;
+
+  /* Accent */
+  --accent: #d4521a;
+  --accent-hover: #b84010;
+  --accent-glow: rgba(212, 82, 26, 0.3);
+  --amber: #c8a020;
+  --amber-bg: #fdf9e8;
+  --amber-border: #d4c068;
+  --danger: #d04040;
+
+  /* Text hierarchy */
+  --text-primary: #1a1510;
+  --text-secondary: #6a6050;
+  --text-tertiary: #9a8f7e;
+  --text-muted: #b0a898;
+  --text-dim: #c8c0b0;
+  --online-color: #1a8040;
+
+  /* Semantic text */
+  --text-running: #a84010;
+  --text-ask: #907010;
+  --text-user: #3060c0;
+
+  /* Surface variants */
+  --surface-hover: #f0ebe2;
+  --surface-raised: #ede8e0;
+  --surface-running: #fde8d8;
+  --surface-ask: #fdf0c0;
+  --surface-danger: #fde8e0;
+
+  /* Border variants */
+  --border-running: #f0c0a0;
+  --border-ask: #e0cc70;
+  --border-danger: #e0b0b0;
+  --border-focus: rgba(212, 82, 26, 0.25);
+
+  /* Tag colors */
+  --tag-running-bg: #fde8d8;
+  --tag-running-border: #f0c0a0;
+  --tag-running-text: #a84010;
+  --tag-ask-bg: #fdf0c0;
+  --tag-ask-border: #e0cc70;
+  --tag-ask-text: #907010;
+  --tag-idle-bg: #edeae4;
+  --tag-idle-border: #d4cec6;
+  --tag-idle-text: #a09080;
+  --tag-model-bg: #ebe8f4;
+  --tag-model-border: #c8c0e0;
+  --tag-model-text: #7060a8;
+
+  /* Chat bubbles */
+  --chat-user-bg: #ebf0fc;
+  --chat-user-border: #c0d0f0;
+  --chat-user-text: #203860;
+  --chat-ai-bg: #f8f4ee;
+  --chat-ai-border: #d8d0c4;
+  --chat-ai-text: #2a2218;
+
+  /* Tool row */
+  --tool-row-bg: #fdf4ee;
+  --tool-row-border: #f0c8a8;
+  --tool-row-color: #a87050;
+
+  /* Code snippet */
+  --code-snip-bg: #1a1510;
+  --code-snip-border: #c8c0b0;
+  --code-snip-text: #c0b090;
+
+  /* Composer & input */
+  --composer-bg: #f0ebe2;
+  --input-bg: #f8f4ee;
+  --input-border: #c8c0b0;
+
+  /* Tab bar */
+  --tab-bg: #ede8e0;
+  --tab-border: #d0c8bc;
+
+  /* Toggle component */
+  --toggle-track-off: var(--border-alt);
+  --toggle-knob-off: var(--text-muted);
+  --toggle-track-on: var(--tag-running-bg);
+  --toggle-knob-on: var(--accent);
+  --sgroup-label-color: var(--text-muted);
+
+  /* Typography */
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.15);
+
+  /* Z-index */
+  --z-sticky: 100;
+  --z-fixed: 200;
+  --z-dropdown: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  /* Transitions */
+  --transition-fast: 0.12s ease;
+  --transition-normal: 0.2s ease;
+  --transition-slow: 0.3s ease;
+
+  /* Project icon colors */
+  --project-color-red: #ef4444;
+  --project-color-orange: #f97316;
+  --project-color-amber: #f59e0b;
+  --project-color-green: #22c55e;
+  --project-color-teal: #14b8a6;
+  --project-color-blue: #3b82f6;
+  --project-color-indigo: #6366f1;
+  --project-color-purple: #a855f7;
+  --project-color-pink: #ec4899;
+  --project-color-mint: #6ee7b7;
+  --project-color-default: var(--text-tertiary);
+}
+
+/* ─── Dark theme ─── */
+[data-theme="dark"] {
+  /* Base surfaces — neutral greys matching reference app */
+  --bg: #111113;
+  --surface: #1c1c1f;
+  --border: #2e2e32;
+  --border-alt: #323236;
+  --border-strong: #3f3f46;
+
+  /* Accent */
+  --accent: #f97316;
+  --accent-hover: #ea6b0e;
+  --accent-glow: rgba(249, 115, 22, 0.25);
+  --amber: #f59e0b;
+  --amber-bg: #1c1505;
+  --amber-border: #2d2008;
+  --danger: #ef4444;
+
+  /* Text hierarchy — high-contrast neutral greys */
+  --text-primary: #f4f4f5;
+  --text-secondary: #a1a1aa;
+  --text-tertiary: #71717a;
+  --text-muted: #52525b;
+  --text-dim: #3f3f46;
+  --online-color: #4ade80;
+
+  /* Semantic text */
+  --text-running: #4ade80;
+  --text-ask: #fbbf24;
+  --text-user: #60a5fa;
+
+  /* Surface variants */
+  --surface-hover: #27272a;
+  --surface-raised: #232326;
+  --surface-running: #052e16;
+  --surface-ask: #1c1505;
+  --surface-danger: #1c0a0a;
+
+  /* Border variants */
+  --border-running: #166534;
+  --border-ask: #78350f;
+  --border-danger: #7f1d1d;
+  --border-focus: rgba(249, 115, 22, 0.4);
+
+  /* Tag colors */
+  --tag-running-bg: #052e16;
+  --tag-running-border: #166534;
+  --tag-running-text: #4ade80;
+  --tag-ask-bg: #1c1505;
+  --tag-ask-border: #78350f;
+  --tag-ask-text: #fbbf24;
+  --tag-idle-bg: #27272a;
+  --tag-idle-border: #3f3f46;
+  --tag-idle-text: #a1a1aa;
+  --tag-model-bg: #1e1b2e;
+  --tag-model-border: #312e55;
+  --tag-model-text: #c4b5fd;
+
+  /* Chat bubbles */
+  --chat-user-bg: #0f172a;
+  --chat-user-border: #1e3a5f;
+  --chat-user-text: #60a5fa;
+  --chat-ai-bg: #1c1c1f;
+  --chat-ai-border: #2e2e32;
+  --chat-ai-text: #d4d4d8;
+
+  /* Tool row */
+  --tool-row-bg: #1a1208;
+  --tool-row-border: #3d2b0a;
+  --tool-row-color: #d97706;
+
+  /* Code snippet */
+  --code-snip-bg: #0d0d0f;
+  --code-snip-border: #2e2e32;
+  --code-snip-text: #86efac;
+
+  /* Composer & input */
+  --composer-bg: #1c1c1f;
+  --input-bg: #111113;
+  --input-border: #2e2e32;
+  --tab-bg: #111113;
+  --tab-border: #1c1c1f;
+
+  /* Toggle */
+  --toggle-track-off: #3f3f46;
+  --toggle-knob-off: #71717a;
+  --toggle-track-on: #166534;
+  --toggle-knob-on: #4ade80;
+  --sgroup-label-color: #71717a;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.6);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.7);
+  --shadow-xl: 0 12px 48px rgba(0, 0, 0, 0.8);
+}

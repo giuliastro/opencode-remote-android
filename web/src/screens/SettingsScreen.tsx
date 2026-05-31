@@ -1,4 +1,4 @@
-import type { ServerConfig } from "../types"
+import type { McpServer, ServerConfig } from "../types"
 
 type NoticeType = "info" | "success" | "error"
 
@@ -16,6 +16,7 @@ type SettingsScreenProps = {
   testConnection: (c: ServerConfig) => Promise<void>
   onOpenHelp: () => void
   onBack: () => void
+  mcpServers: Record<string, McpServer>
 }
 
 export default function SettingsScreen({
@@ -31,7 +32,8 @@ export default function SettingsScreen({
   saveConfig,
   testConnection,
   onOpenHelp,
-  onBack
+  onBack,
+  mcpServers
 }: SettingsScreenProps) {
   const isConnected = Boolean(connectedVersion)
 
@@ -174,6 +176,33 @@ export default function SettingsScreen({
             </div>
           </div>
         </div>
+
+        {/* MCP Servers group */}
+        {Object.keys(mcpServers).length > 0 && (
+          <div className="sgroup">
+            <div className="sgroup-label">MCP Servers</div>
+            <div className="sfield">
+              {Object.entries(mcpServers).map(([name, server]) => (
+                <div className="sfield-row" key={name}>
+                  <div className="sfl">{name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <div
+                      style={{
+                        width: 7,
+                        height: 7,
+                        borderRadius: "50%",
+                        background: server.status === "connected" ? "var(--online-color)" : "var(--text-muted)"
+                      }}
+                    />
+                    <span style={{ fontFamily: "var(--font-mono)", fontSize: "11px", color: "var(--text-tertiary)" }}>
+                      {server.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* About group */}
         <div className="sgroup">

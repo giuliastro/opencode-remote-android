@@ -78,11 +78,23 @@ export function useChat(params: {
     }
   }
 
-  async function replyQuestion(requestID: string, text: string) {
+  async function replyQuestion(requestID: string, directory: string, answers: string[][]) {
     if (!selectedSession) return
     try {
       setRuntimeError(null)
-      await api.replyQuestion(config, requestID, selectedSession.directory, [text])
+      await api.replyQuestion(config, requestID, directory, answers)
+      await refreshSessions()
+      await loadSelected(selectedSession.id, selectedSession.directory)
+    } catch (err) {
+      setRuntimeError((err as Error).message)
+    }
+  }
+
+  async function rejectQuestion(requestID: string) {
+    if (!selectedSession) return
+    try {
+      setRuntimeError(null)
+      await api.rejectQuestion(config, requestID)
       await refreshSessions()
       await loadSelected(selectedSession.id, selectedSession.directory)
     } catch (err) {
@@ -103,7 +115,7 @@ export function useChat(params: {
     // "permission" is handled by buttons only — user shouldn't be typing.
     const isQuestionState = (selectedSession.status === "question" || selectedSession.status === "ask") && selectedSession.requestID
     if (isQuestionState) {
-      await replyQuestion(selectedSession.requestID!, text)
+      await replyQuestion(selectedSession.requestID!, selectedSession.directory, [[text]])
       return
     }
 
@@ -275,6 +287,7 @@ export function useChat(params: {
     abortSession,
     selectModel,
     replyPermission,
-    replyQuestion
+    replyQuestion,
+    rejectQuestion
   }
 }
