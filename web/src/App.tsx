@@ -41,7 +41,7 @@ function App() {
   const connected = sv.connectedVersion !== ""
 
   const isWorking = Boolean(
-    sd.selectedSession && ["busy", "retry", "ask"].includes(sd.selectedSession.status),
+    sd.selectedSession && ["busy", "retry", "ask", "question", "permission"].includes(sd.selectedSession.status),
   )
 
   function openSession(id: string, dir: string) {
@@ -134,6 +134,7 @@ function App() {
           currentAgent={sd.currentAgent}
           primaryAgents={sd.primaryAgents}
           cycleAgent={chat.cycleAgent}
+          replyPermission={chat.replyPermission}
         />
       ) : helpOpen ? (
         <HelpScreen

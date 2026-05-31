@@ -30,6 +30,7 @@ export type SessionStatus = {
   attempt?: number
   message?: string
   next?: number
+  requestID?: string
 }
 
 export type ToolStatePending = {
@@ -153,6 +154,7 @@ export type SessionView = {
   updated: number
   status: string
   statusMessage?: string
+  requestID?: string
   files: number
   additions: number
   deletions: number

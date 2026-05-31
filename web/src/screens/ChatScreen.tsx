@@ -65,6 +65,7 @@ type ChatScreenProps = {
   currentAgent: string | null
   primaryAgents: AgentInfo[]
   cycleAgent: () => void
+  replyPermission: (requestID: string, reply: "once" | "always" | "reject") => Promise<void>
 }
 
 export default function ChatScreen({
@@ -101,12 +102,15 @@ export default function ChatScreen({
   cycleVariant,
   currentAgent,
   primaryAgents,
-  cycleAgent
+  cycleAgent,
+  replyPermission
 }: ChatScreenProps) {
   const chatSub = selectedSession?.directory ?? ""
 
   const isRunning = selectedSession?.status === "busy" || selectedSession?.status === "retry"
-  const isAsking = selectedSession?.status === "ask"
+  const isPermission = selectedSession?.status === "permission"
+  const isQuestion = selectedSession?.status === "ask" || selectedSession?.status === "question"
+  const isAsking = isPermission || isQuestion
 
   return (
     <div className="app-screen">
@@ -244,8 +248,29 @@ export default function ChatScreen({
         )}
       </div>
 
-      {/* Permission prompt banner */}
-      {isAsking && (
+      {/* Permission banner */}
+      {isPermission && selectedSession?.requestID && (
+        <div className="ask-banner ask-banner-permission">
+          <div className="ask-banner-msg">
+            <i className="ti ti-shield-question"></i>
+            <span>{selectedSession.statusMessage ?? "Permission required"}</span>
+          </div>
+          <div className="ask-banner-actions">
+            <button className="perm-btn allow-once" onClick={() => replyPermission(selectedSession.requestID!, "once")}>
+              Allow once
+            </button>
+            <button className="perm-btn allow-always" onClick={() => replyPermission(selectedSession.requestID!, "always")}>
+              Always
+            </button>
+            <button className="perm-btn deny" onClick={() => replyPermission(selectedSession.requestID!, "reject")}>
+              Deny
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Question / generic ask banner */}
+      {isQuestion && (
         <div className="ask-banner">
           <i className="ti ti-help-circle"></i>
           <span>{selectedSession?.statusMessage ?? "Opencode is awaiting your response"}</span>
@@ -311,8 +336,8 @@ export default function ChatScreen({
         </div>
       )}
 
-      {/* Composer */}
-      {selectedSession && (
+      {/* Composer — hidden during permission prompts since only buttons are needed */}
+      {selectedSession && !isPermission && (
         <Composer
           composer={composer}
           setComposer={setComposer}

@@ -185,5 +185,19 @@ export const api = {
       method: "POST",
       body: {}
     })
+  },
+
+  replyPermission(config: ServerConfig, requestID: string, directory: string, reply: "once" | "always" | "reject") {
+    return request<boolean>(config, `/permission/${requestID}/reply`, {
+      method: "POST",
+      body: { directory, reply }
+    })
+  },
+
+  replyQuestion(config: ServerConfig, requestID: string, directory: string, answers: string[]) {
+    return request<boolean>(config, `/question/${requestID}/reply`, {
+      method: "POST",
+      body: { directory, answers }
+    })
   }
 }

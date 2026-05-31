@@ -129,8 +129,8 @@ export default function SessionsScreen({
     const normalizeTime = (updated: number) => (updated < 1_000_000_000_000 ? updated * 1000 : updated)
 
     const busy = filteredSessions.filter((s) => s.status === "busy" || s.status === "retry")
-    const actionRequired = filteredSessions.filter((s) => s.status === "ask")
-    const rest = filteredSessions.filter((s) => s.status !== "busy" && s.status !== "retry" && s.status !== "ask")
+    const actionRequired = filteredSessions.filter((s) => s.status === "ask" || s.status === "question" || s.status === "permission")
+    const rest = filteredSessions.filter((s) => s.status !== "busy" && s.status !== "retry" && s.status !== "ask" && s.status !== "question" && s.status !== "permission")
 
     const sections: Array<{ label: string; sessions: SessionView[] }> = []
     if (busy.length > 0) sections.push({ label: `Busy · ${busy.length}`, sessions: busy })

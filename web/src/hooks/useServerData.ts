@@ -141,6 +141,7 @@ export function useServerData(config: ServerConfig) {
           updated: session.time.updated,
           status: statuses[session.id]?.type ?? "idle",
           statusMessage: statuses[session.id]?.message,
+          requestID: statuses[session.id]?.requestID,
           files: session.summary?.files ?? 0,
           additions: session.summary?.additions ?? 0,
           deletions: session.summary?.deletions ?? 0

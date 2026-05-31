@@ -9,16 +9,20 @@ type Props = {
   selectionMode?: boolean
 }
 
+function isAskLike(status: string) {
+  return status === "ask" || status === "question" || status === "permission"
+}
+
 function getDotColor(status: string): string {
   if (status === "busy" || status === "retry") return "green"
-  if (status === "ask") return "amber"
+  if (isAskLike(status)) return "amber"
   return "gray"
 }
 
 function getCardClass(status: string, selected?: boolean): string {
   const sel = selected ? " selected" : ""
   if (status === "busy" || status === "retry") return `scard running${sel}`
-  if (status === "ask") return `scard ask${sel}`
+  if (isAskLike(status)) return `scard ask${sel}`
   return `scard${sel}`
 }
 
@@ -26,8 +30,9 @@ function renderStatusTag(status: string, statusMessage?: string) {
   if (status === "busy" || status === "retry") {
     return <span className="tag running">running</span>
   }
-  if (status === "ask") {
-    return <span className="tag ask">{statusMessage ?? "awaiting you"}</span>
+  if (isAskLike(status)) {
+    const label = status === "permission" ? "permission" : statusMessage ?? "awaiting you"
+    return <span className="tag ask">{label}</span>
   }
   return <span className="tag idle">idle</span>
 }

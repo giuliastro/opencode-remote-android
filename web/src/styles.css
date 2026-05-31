@@ -696,6 +696,52 @@ input, textarea, button, select {
   margin-top: 1px;
 }
 
+.ask-banner-permission {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ask-banner-msg {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.ask-banner-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.perm-btn {
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: opacity var(--transition-fast);
+}
+.perm-btn:active {
+  opacity: 0.75;
+}
+.perm-btn.allow-once {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+.perm-btn.allow-always {
+  background: transparent;
+  color: var(--accent);
+  border-color: var(--accent);
+}
+.perm-btn.deny {
+  background: transparent;
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
 .stop-btn {
   width: 28px;
   height: 28px;
