@@ -10,6 +10,8 @@
   - New sessions open directly in detail view.
   - New Session button is disabled while creation is in progress to avoid duplicate sessions.
   - Session list has a manual Refresh button.
+  - Empty sessions no longer waste vertical space with an empty Todo box.
+  - Empty/loading chat state is compact so the composer is visible on phone screens.
 
 ## UX/UI review
 
