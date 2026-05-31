@@ -125,3 +125,7 @@ The app is not limited to LAN. You can also use it over WAN/VPN if your network 
 - `/session`, `/session/status`, `/session/:id`
 - `/session/:id/message`, `/session/:id/command`, `/session/:id/abort`
 - `/session/:id/todo`, `/session/:id/diff`
+
+## Contributors
+
+<a href="https://github.com/gervaso-assistant"><img src="https://github.com/gervaso-assistant.png" width="40" height="40" alt="Gervaso" title="Gervaso" /></a>

@@ -1,10 +1,10 @@
-name: Build Android APK
+name: Build Android AAB (Play Store)
 
 on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
@@ -43,8 +43,8 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install Android 34 SDK packages
-        run: sdkmanager "platform-tools" "platforms;android-34" "build-tools;34.0.0"
+      - name: Install Android 35 SDK packages
+        run: sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses
@@ -64,6 +64,12 @@ jobs:
         run: npx cap sync android
         working-directory: web
 
+      - name: Patch Android SDK version and enable R8
+        run: |
+          sed -i 's/compileSdkVersion = .*/compileSdkVersion = 35/' web/android/variables.gradle
+          sed -i 's/targetSdkVersion = .*/targetSdkVersion = 35/' web/android/variables.gradle
+          sed -i 's/minifyEnabled false/minifyEnabled true/' web/android/app/build.gradle
+
       - name: Read app version
         id: version
         run: |
@@ -75,66 +81,39 @@ jobs:
       - name: Sync Android version metadata
         run: node web/scripts/sync-android-version.mjs "${{ steps.version.outputs.app_version }}" "${{ steps.version.outputs.version_code }}"
 
-      - name: Build release APK (unsigned)
-        run: ./gradlew assembleRelease --stacktrace --no-daemon
+      - name: Build release AAB (unsigned)
+        run: ./gradlew bundleRelease --stacktrace --no-daemon
         working-directory: web/android
-
-      - name: Require signing secrets for tagged release
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: |
-          test -n "$ANDROID_KEYSTORE_BASE64" || (echo "Missing ANDROID_KEYSTORE_BASE64" && exit 1)
-          test -n "$ANDROID_KEYSTORE_PASSWORD" || (echo "Missing ANDROID_KEYSTORE_PASSWORD" && exit 1)
-          test -n "$ANDROID_KEY_ALIAS" || (echo "Missing ANDROID_KEY_ALIAS" && exit 1)
-          test -n "$ANDROID_KEY_PASSWORD" || (echo "Missing ANDROID_KEY_PASSWORD" && exit 1)
 
       - name: Decode Android release keystore
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         run: |
           echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > web/android/release.keystore
 
-      - name: Sign release APK
+      - name: Sign release AAB
         if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
         run: |
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" sign \
-            --ks web/android/release.keystore \
-            --ks-pass pass:"$ANDROID_KEYSTORE_PASSWORD" \
-            --ks-key-alias "$ANDROID_KEY_ALIAS" \
-            --key-pass pass:"$ANDROID_KEY_PASSWORD" \
-            --out web/android/app/build/outputs/apk/release/app-release-signed.apk \
-            web/android/app/build/outputs/apk/release/app-release-unsigned.apk
+          jarsigner \
+            -keystore web/android/release.keystore \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -keypass "$ANDROID_KEY_PASSWORD" \
+            -signedjar web/android/app/build/outputs/bundle/release/app-release-signed.aab \
+            web/android/app/build/outputs/bundle/release/app-release.aab \
+            "$ANDROID_KEY_ALIAS"
 
-      - name: Verify release APK signature
-        if: ${{ env.ANDROID_KEYSTORE_BASE64 != '' && env.ANDROID_KEYSTORE_PASSWORD != '' && env.ANDROID_KEY_ALIAS != '' && env.ANDROID_KEY_PASSWORD != '' }}
+      - name: Select AAB path
+        id: aab
         run: |
-          "$ANDROID_HOME/build-tools/34.0.0/apksigner" verify --verbose web/android/app/build/outputs/apk/release/app-release-signed.apk
-
-      - name: Select release APK path
-        id: apk
-        run: |
-          if [ -f web/android/app/build/outputs/apk/release/app-release-signed.apk ]; then
-            echo "path=web/android/app/build/outputs/apk/release/app-release-signed.apk" >> "$GITHUB_OUTPUT"
+          if [ -f web/android/app/build/outputs/bundle/release/app-release-signed.aab ]; then
+            echo "path=web/android/app/build/outputs/bundle/release/app-release-signed.aab" >> "$GITHUB_OUTPUT"
+            echo "name=app-release-signed.aab" >> "$GITHUB_OUTPUT"
           else
-            echo "path=web/android/app/build/outputs/apk/release/app-release-unsigned.apk" >> "$GITHUB_OUTPUT"
+            echo "path=web/android/app/build/outputs/bundle/release/app-release.aab" >> "$GITHUB_OUTPUT"
+            echo "name=app-release.aab" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Upload release APK artifact
+      - name: Upload AAB artifact
         uses: actions/upload-artifact@v4
         with:
-          name: opencode-remote-release-apk-v${{ steps.version.outputs.app_version }}
-          path: ${{ steps.apk.outputs.path }}
-
-      - name: Publish GitHub release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: OpenCode Remote v${{ steps.version.outputs.app_version }}
-          files: ${{ steps.apk.outputs.path }}
-          generate_release_notes: true
-          body: |
-            ## Release
-            Stable Android release APK for OpenCode Remote `${{ steps.version.outputs.app_version }}`.
-
-            ## Notes
-            - Built from `${{ github.sha }}`
-            - Version code `${{ steps.version.outputs.version_code }}`
+          name: opencode-remote-aab-v${{ steps.version.outputs.app_version }}
+          path: ${{ steps.aab.outputs.path }}
