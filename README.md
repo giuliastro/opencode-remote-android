@@ -128,4 +128,4 @@ The app is not limited to LAN. You can also use it over WAN/VPN if your network 
 
 ## Contributors
 
-- [Gervaso](https://github.com/gervaso-assistant) — Android mobile session UX improvements, delete confirmation, compact chat layout, unauthenticated server support
+<a href="https://github.com/gervaso-assistant"><img src="https://github.com/gervaso-assistant.png" width="40" height="40" alt="Gervaso" title="Gervaso" /></a>
