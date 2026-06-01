@@ -29,6 +29,7 @@ type TranslationKey =
   | 'settings.connectedTo'
   | 'settings.language'
   | 'sessions.title'
+  | 'sessions.summary'
   | 'sessions.new'
   | 'sessions.creating'
   | 'sessions.refresh'
@@ -93,6 +94,7 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'settings.connectedTo': 'Connected to OpenCode {version}',
     'settings.language': 'Language',
     'sessions.title': 'Sessions',
+    'sessions.summary': '{total} total · {active} active · {changed} changed',
     'sessions.new': 'New Session',
     'sessions.creating': 'Creating...',
     'sessions.refresh': 'Refresh',
@@ -156,6 +158,7 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'settings.connectedTo': 'Connesso a OpenCode {version}',
     'settings.language': 'Lingua',
     'sessions.title': 'Sessioni',
+    'sessions.summary': '{total} totali · {active} attive · {changed} con modifiche',
     'sessions.new': 'Nuova sessione',
     'sessions.creating': 'Creazione...',
     'sessions.refresh': 'Aggiorna',
@@ -219,6 +222,7 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'settings.connectedTo': '已連線至 OpenCode {version}',
     'settings.language': '語言',
     'sessions.title': '工作階段',
+    'sessions.summary': '{total} 總數 · {active} 進行中 · {changed} 有變更',
     'sessions.new': '新增工作階段',
     'sessions.creating': '建立中...',
     'sessions.refresh': '重新整理',

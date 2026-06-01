@@ -14,8 +14,7 @@ import {
   SaveIcon,
   TestIcon,
   LoadingIcon,
-  RocketIcon,
-  MenuIcon
+  RocketIcon
 } from "./Icons"
 
 const STORAGE_KEY = "opencode.remote.server"
@@ -104,7 +103,7 @@ function App() {
   const [helpPage, setHelpPage] = useState<"overview" | "server" | "network" | "troubleshooting" | "commands">(
     "overview"
   )
-  const [view, setView] = useState<"menu" | "settings" | "sessions" | "detail" | "help">(() => {
+  const [view, setView] = useState<"settings" | "sessions" | "detail" | "help">(() => {
     return config.host && config.port > 0 ? "sessions" : "settings"
   })
 
@@ -148,6 +147,10 @@ function App() {
   const hasConfiguredServer = Boolean(config.host && config.port > 0)
   const isSessionRunning = Boolean(selectedSession && ["busy", "retry"].includes(selectedSession.status))
   const isWorking = busySending || isSessionRunning
+  const activeSessions = sessions.filter((session) => ["busy", "retry"].includes(session.status)).length
+  const changedSessions = sessions.filter(
+    (session) => session.files > 0 || session.additions > 0 || session.deletions > 0
+  ).length
 
   async function openSession(sessionID: string, directory: string) {
     setSelectedID(sessionID)
@@ -359,119 +362,54 @@ function App() {
     wasRunningRef.current = runningNow
   }, [selectedSession?.id, selectedSession?.status])
 
-
+  const navItems = [
+    { view: "sessions" as const, label: t('nav.sessions'), icon: <FolderIcon size={19} />, disabled: !hasConfiguredServer },
+    { view: "detail" as const, label: t('nav.detail'), icon: <ChatIcon size={19} />, disabled: !selectedSession },
+    { view: "settings" as const, label: t('nav.settings'), icon: <SettingsIcon size={19} />, disabled: false },
+    { view: "help" as const, label: t('nav.help'), icon: <HelpIcon size={19} />, disabled: false }
+  ]
 
   return (
     <div className="app-shell">
-      <header className="top-nav panel fade-in">
+      <header className="top-nav fade-in">
         <div className="brand-section">
           <div className="brand-title">
             <img src="/app-icon.png" alt="" className="app-icon" />
-            <h1>{t('app.title')}</h1>
+            <div>
+              <h1>{t('app.title')}</h1>
+              <p className="subtle">
+                {hasConfiguredServer ? `${config.host}:${config.port}` : t('settings.title')}
+              </p>
+            </div>
           </div>
         </div>
-        
-        {/* Desktop navigation */}
+
         <nav className="desktop-nav tab-row" role="navigation" aria-label="Main navigation">
-          <button 
-            className={view === "settings" ? "active" : ""} 
-            onClick={() => setView("settings")}
-            aria-label="Settings"
-          >
-            <SettingsIcon size={18} />
-            <span>{t('nav.settings')}</span>
-          </button>
-          <button
-            className={view === "sessions" ? "active" : ""}
-            onClick={() => setView("sessions")}
-            disabled={!hasConfiguredServer}
-            aria-label="Sessions"
-          >
-            <FolderIcon size={18} />
-            <span>{t('nav.sessions')}</span>
-          </button>
-          <button
-            className={view === "detail" ? "active" : ""}
-            onClick={() => setView("detail")}
-            disabled={!selectedSession}
-            aria-label="Detail"
-          >
-            <ChatIcon size={18} />
-            <span>{t('nav.detail')}</span>
-          </button>
-          <button 
-            className={view === "help" ? "active" : ""} 
-            onClick={() => setView("help")}
-            aria-label="Help"
-          >
-            <HelpIcon size={18} />
-            <span>{t('nav.help')}</span>
-          </button>
+          {navItems.map((item) => (
+            <button
+              key={item.view}
+              className={view === item.view ? "active" : ""}
+              onClick={() => setView(item.view)}
+              disabled={item.disabled}
+              aria-label={item.label}
+            >
+              {item.icon}
+              <span>{item.label}</span>
+            </button>
+          ))}
         </nav>
-
-        {/* Mobile menu button */}
-        <button 
-          className={view === "menu" ? "mobile-menu-btn active" : "mobile-menu-btn"}
-          onClick={() => setView("menu")}
-          aria-label="Open menu"
-        >
-          <MenuIcon size={24} />
-        </button>
       </header>
-
-      {view === "menu" && (
-        <section className="panel menu-panel fade-in">
-          <h2>{t('menu.title')}</h2>
-          <div className="menu-grid">
-            <button 
-              className="menu-item"
-              onClick={() => setView("settings")}
-              aria-label="Settings"
-            >
-              <SettingsIcon size={28} />
-              <span>{t('nav.settings')}</span>
-              <small>{t('menu.settingsDescription')}</small>
-            </button>
-            
-            <button
-              className="menu-item"
-              onClick={() => setView("sessions")}
-              disabled={!hasConfiguredServer}
-              aria-label="Sessions"
-            >
-              <FolderIcon size={28} />
-              <span>{t('nav.sessions')}</span>
-              <small>{t('menu.sessionsDescription')}</small>
-            </button>
-            
-            <button
-              className="menu-item"
-              onClick={() => setView("detail")}
-              disabled={!selectedSession}
-              aria-label="Detail"
-            >
-              <ChatIcon size={28} />
-              <span>{t('nav.detail')}</span>
-              <small>{t('menu.detailDescription')}</small>
-            </button>
-            
-            <button 
-              className="menu-item"
-              onClick={() => setView("help")}
-              aria-label="Help"
-            >
-              <HelpIcon size={28} />
-              <span>{t('nav.help')}</span>
-              <small>{t('menu.helpDescription')}</small>
-            </button>
-          </div>
-        </section>
-      )}
 
       {view === "settings" && (
         <section className="panel settings fade-in">
-          <h2>{t('settings.title')}</h2>
+          <div className="section-heading">
+            <div>
+              <h2>{t('settings.title')}</h2>
+              <p className="subtle">{hasConfiguredServer ? `${config.host}:${config.port}` : t('settings.hostPlaceholder')}</p>
+            </div>
+          </div>
 
+          <div className="form-grid">
           <label htmlFor="language">
             {t('settings.language')}
             <select
@@ -526,6 +464,7 @@ function App() {
               placeholder={t('settings.passwordPlaceholder')}
             />
           </label>
+          </div>
           
           <div className="actions">
             <button 
@@ -575,8 +514,13 @@ function App() {
 
       {view === "sessions" && (
         <section className="panel sessions fade-in">
-          <div className="header-row">
-            <h2>{t('sessions.title')}</h2>
+          <div className="section-heading">
+            <div>
+              <h2>{t('sessions.title')}</h2>
+              <p className="subtle">
+                {t('sessions.summary', { total: sessions.length, active: activeSessions, changed: changedSessions })}
+              </p>
+            </div>
             <div className="inline-actions">
               <button onClick={() => refreshSessions()} className="btn-secondary">
                 <LoadingIcon size={18} />
@@ -589,16 +533,18 @@ function App() {
             </div>
           </div>
           
-          <input
-            placeholder={t('sessions.searchPlaceholder')}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            className="search"
-          />
+          <div className="toolbar">
+            <input
+              placeholder={t('sessions.searchPlaceholder')}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              className="search"
+            />
+          </div>
           
           <div className="session-list">
             {filteredSessions.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: 'var(--space-8)', color: 'var(--secondary-500)' }}>
+              <div className="empty-state">
                 <FolderIcon size={48} className="icon-empty-state" />
                 <p>{t('sessions.emptyTitle')}</p>
                 <p className="subtle">{t('sessions.emptyHint')}</p>
@@ -618,22 +564,24 @@ function App() {
                     }
                   }}
                 >
-                  <div className="header-row">
-                    <h3>{session.title}</h3>
+                  <div className="session-card-main">
+                    <div>
+                      <h3>{session.title}</h3>
+                      <p>{session.directory}</p>
+                    </div>
                     <span className={`pill ${session.status}`}>{session.status}</span>
                   </div>
-                  <p>{session.directory}</p>
                   <div className="session-stats">
                     {session.files > 0 || session.additions > 0 || session.deletions > 0 ? (
-                      <span>
-                        <strong>{session.files}</strong> files • 
-                        <strong style={{ color: 'var(--success-600)' }}> +{session.additions}</strong> • 
-                        <strong style={{ color: 'var(--accent-600)' }}> -{session.deletions}</strong>
+                      <span className="change-summary">
+                        <strong>{session.files}</strong> files
+                        <strong className="positive">+{session.additions}</strong>
+                        <strong className="negative">-{session.deletions}</strong>
                       </span>
                     ) : (
                       <span className="subtle">{t('sessions.noFileChanges')}</span>
                     )}
-                    <span className="subtle">• {t('sessions.updated', { time: formatTime(session.updated) })}</span>
+                    <span className="subtle">{t('sessions.updated', { time: formatTime(session.updated) })}</span>
                   </div>
                   <div className="inline-actions">
                     <button
@@ -1036,6 +984,21 @@ http://YOUR_PC_IP:4096/global/health</pre>
           {runtimeError && <p className="error">{runtimeError}</p>}
         </section>
       )}
+
+      <nav className="bottom-nav" role="navigation" aria-label="Mobile navigation">
+        {navItems.map((item) => (
+          <button
+            key={item.view}
+            className={view === item.view ? "active" : ""}
+            onClick={() => setView(item.view)}
+            disabled={item.disabled}
+            aria-label={item.label}
+          >
+            {item.icon}
+            <span>{item.label}</span>
+          </button>
+        ))}
+      </nav>
     </div>
   )
 }
