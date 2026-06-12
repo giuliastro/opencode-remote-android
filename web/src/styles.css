@@ -437,6 +437,103 @@ p {
   flex: 0 0 auto;
 }
 
+.project-dashboard,
+.diff-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-subtle);
+  padding: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.project-dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+}
+
+.dashboard-card {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: var(--space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.dashboard-card strong,
+.dashboard-card small,
+.diff-file span:first-child,
+.mini-diff-card strong {
+  overflow-wrap: anywhere;
+}
+
+.dashboard-card small {
+  color: var(--muted);
+}
+
+.dashboard-label {
+  color: var(--muted-strong);
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.diff-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.diff-file-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.diff-file {
+  width: 100%;
+  min-height: 44px;
+  justify-content: space-between;
+  border-color: var(--border);
+  background: var(--surface);
+  text-align: left;
+}
+
+.diff-file.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.mini-diff-card {
+  margin-top: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  padding: var(--space-3);
+}
+
+.mini-diff-bars {
+  height: 10px;
+  display: flex;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--surface-strong);
+  margin: var(--space-2) 0;
+}
+
+.mini-diff-add {
+  background: var(--success);
+}
+
+.mini-diff-del {
+  background: var(--danger);
+}
+
 .messages-wrap {
   position: relative;
   flex: 1 1 auto;
@@ -839,6 +936,19 @@ p {
 
   .session-stats {
     gap: var(--space-2);
+  }
+
+  .project-dashboard {
+    grid-template-columns: 1fr;
+  }
+
+  .diff-panel-header {
+    flex-direction: column;
+  }
+
+  .diff-file {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .detail {

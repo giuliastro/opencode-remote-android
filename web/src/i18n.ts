@@ -53,6 +53,20 @@ type TranslationKey =
   | 'detail.jumpToLatest'
   | 'detail.you'
   | 'detail.opencode'
+  | 'detail.projectDashboardLabel'
+  | 'detail.projectLabel'
+  | 'detail.vcsLabel'
+  | 'detail.loadingProject'
+  | 'detail.unavailable'
+  | 'detail.aheadBehind'
+  | 'detail.fileStatusLabel'
+  | 'detail.fileStatusSource'
+  | 'detail.dashboardError'
+  | 'detail.changedFilesTitle'
+  | 'detail.changedFilesHint'
+  | 'detail.filesCount'
+  | 'detail.miniDiffAria'
+  | 'detail.linesAddedDeleted'
   | 'todo.title'
   | 'todo.hide'
   | 'todo.show'
@@ -121,6 +135,20 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'detail.jumpToLatest': 'Go to latest',
     'detail.you': '👤 You',
     'detail.opencode': '🤖 OpenCode',
+    'detail.projectDashboardLabel': 'Project and VCS dashboard',
+    'detail.projectLabel': 'Project',
+    'detail.vcsLabel': 'VCS',
+    'detail.loadingProject': 'Loading...',
+    'detail.unavailable': 'Unavailable',
+    'detail.aheadBehind': '{ahead} ahead · {behind} behind',
+    'detail.fileStatusLabel': 'Changed files',
+    'detail.fileStatusSource': 'From /file/status',
+    'detail.dashboardError': 'Error: {message}',
+    'detail.changedFilesTitle': 'Changed files',
+    'detail.changedFilesHint': 'Tap a file to see the mini diff.',
+    'detail.filesCount': '{count} files',
+    'detail.miniDiffAria': 'Changed files mini diff',
+    'detail.linesAddedDeleted': '+{additions} lines · -{deletions} lines',
     'todo.title': 'Todo Items',
     'todo.hide': 'Hide',
     'todo.show': 'Show',
@@ -188,6 +216,20 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'detail.jumpToLatest': 'Vai alla fine',
     'detail.you': '👤 Tu',
     'detail.opencode': '🤖 OpenCode',
+    'detail.projectDashboardLabel': 'Dashboard progetto e VCS',
+    'detail.projectLabel': 'Progetto',
+    'detail.vcsLabel': 'VCS',
+    'detail.loadingProject': 'Caricamento...',
+    'detail.unavailable': 'Non disponibile',
+    'detail.aheadBehind': '{ahead} avanti · {behind} indietro',
+    'detail.fileStatusLabel': 'File modificati',
+    'detail.fileStatusSource': 'Da /file/status',
+    'detail.dashboardError': 'Errore: {message}',
+    'detail.changedFilesTitle': 'File modificati',
+    'detail.changedFilesHint': 'Tocca un file per vedere il mini diff.',
+    'detail.filesCount': '{count} file',
+    'detail.miniDiffAria': 'Mini diff dei file modificati',
+    'detail.linesAddedDeleted': '+{additions} righe · -{deletions} righe',
     'todo.title': 'Todo',
     'todo.hide': 'Nascondi',
     'todo.show': 'Mostra',
@@ -255,6 +297,20 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'detail.jumpToLatest': '前往最新',
     'detail.you': '👤 你',
     'detail.opencode': '🤖 OpenCode',
+    'detail.projectDashboardLabel': '專案與 VCS 儀表板',
+    'detail.projectLabel': '專案',
+    'detail.vcsLabel': 'VCS',
+    'detail.loadingProject': '載入中...',
+    'detail.unavailable': '無法取得',
+    'detail.aheadBehind': '超前 {ahead} · 落後 {behind}',
+    'detail.fileStatusLabel': '已變更檔案',
+    'detail.fileStatusSource': '來自 /file/status',
+    'detail.dashboardError': '錯誤：{message}',
+    'detail.changedFilesTitle': '已變更檔案',
+    'detail.changedFilesHint': '點選檔案查看迷你 diff。',
+    'detail.filesCount': '{count} 個檔案',
+    'detail.miniDiffAria': '已變更檔案迷你 diff',
+    'detail.linesAddedDeleted': '+{additions} 行 · -{deletions} 行',
     'todo.title': '待辦事項',
     'todo.hide': '隱藏',
     'todo.show': '顯示',

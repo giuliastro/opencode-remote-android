@@ -27,6 +27,15 @@ assert.ok(app.includes('typing-bubble'), 'detail view should render a temporary 
 assert.ok(app.includes('typing-dot'), 'typing bubble should show animated dots')
 assert.ok(app.includes('awaitingAssistantReply'), 'typing bubble should stay visible after the send request returns and until a new assistant message arrives')
 assert.ok(app.includes('assistantResponseSignature'), 'typing bubble should be replaced by the next assistant response')
+assert.ok(app.includes('api.loadDiff(config, sessionID)'), 'detail view should load /session/:id/diff for changed-file details')
+assert.ok(app.includes('diffFiles.length > 0'), 'changed-file panel should be hidden when there are no changed files')
+assert.ok(app.includes('className={selectedDiff?.file === file.file ? "diff-file active" : "diff-file"}'), 'changed files should be clickable and show selected state')
+assert.ok(app.includes('mini-diff-card'), 'detail view should render a compact per-file mini diff card')
+assert.ok(app.includes('api.loadProjectCurrent(config, directory)'), 'project dashboard should use /project/current')
+assert.ok(app.includes('api.loadVcs(config, directory)'), 'project dashboard should use /vcs')
+assert.ok(app.includes('api.loadFileStatus(config, directory)'), 'project dashboard should use /file/status')
+assert.ok(/\.project-dashboard[\s\S]*?grid-template-columns:\s*repeat\(3/.test(styles), 'project dashboard should render as compact cards on wide screens')
+assert.ok(/@media \(max-width: 780px\)[\s\S]*?\.project-dashboard[\s\S]*?grid-template-columns:\s*1fr/.test(styles), 'project dashboard should stack on mobile')
 
 assert.match(icons, /export const RefreshIcon/, 'RefreshIcon should exist for idle refresh UI')
 

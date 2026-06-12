@@ -2,12 +2,15 @@ import { Capacitor, CapacitorHttp } from "@capacitor/core"
 import type {
   CommandInfo,
   DiffFile,
+  FileStatusEntry,
   HealthResponse,
   MessageEnvelope,
+  ProjectCurrent,
   ServerConfig,
   Session,
   SessionStatus,
-  TodoItem
+  TodoItem,
+  VcsStatus
 } from "./types"
 
 function authHeader(config: ServerConfig): string {
@@ -142,6 +145,18 @@ export const api = {
 
   loadDiff(config: ServerConfig, sessionID: string) {
     return request<DiffFile[]>(config, `/session/${sessionID}/diff`)
+  },
+
+  loadProjectCurrent(config: ServerConfig, directory?: string) {
+    return request<ProjectCurrent>(config, withDirectory("/project/current", directory))
+  },
+
+  loadVcs(config: ServerConfig, directory?: string) {
+    return request<VcsStatus>(config, withDirectory("/vcs", directory))
+  },
+
+  loadFileStatus(config: ServerConfig, directory?: string) {
+    return request<FileStatusEntry[] | Record<string, FileStatusEntry>>(config, withDirectory("/file/status", directory))
   },
 
   sendPrompt(config: ServerConfig, sessionID: string, text: string, directory?: string) {

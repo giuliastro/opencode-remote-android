@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { api } from "./api"
 import { createTranslator, languageOptions, normalizeLanguage, type LanguageCode } from "./i18n"
-import type { CommandInfo, MessageEnvelope, ServerConfig, SessionView, TodoItem } from "./types"
+import type { CommandInfo, DiffFile, FileStatusEntry, MessageEnvelope, ProjectDashboard, ServerConfig, SessionView, TodoItem } from "./types"
 import {
   SettingsIcon,
   FolderIcon,
@@ -81,6 +81,21 @@ function toDisplayLines(text: string): string[] {
     .filter((line, idx, arr) => line.length > 0 || (idx > 0 && arr[idx - 1].length > 0))
 }
 
+function toFileStatusList(input: FileStatusEntry[] | Record<string, FileStatusEntry>): FileStatusEntry[] {
+  if (Array.isArray(input)) return input
+  return Object.entries(input).map(([path, value]) => ({ path, ...value }))
+}
+
+function pickString(value: unknown): string | null {
+  return typeof value === "string" && value.trim() ? value : null
+}
+
+function summarizeJson(value: unknown): string {
+  if (value === null || value === undefined) return "-"
+  if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") return String(value)
+  return JSON.stringify(value)
+}
+
 function App() {
   type NoticeType = "info" | "success" | "error"
 
@@ -112,6 +127,11 @@ function App() {
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [messages, setMessages] = useState<MessageEnvelope[]>([])
   const [todos, setTodos] = useState<TodoItem[]>([])
+  const [diffFiles, setDiffFiles] = useState<DiffFile[]>([])
+  const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null)
+  const [projectDashboard, setProjectDashboard] = useState<ProjectDashboard | null>(null)
+  const [loadingProjectDashboard, setLoadingProjectDashboard] = useState(false)
+  const [dashboardError, setDashboardError] = useState<string | null>(null)
   const [todosExpanded, setTodosExpanded] = useState(false)
   const [query, setQuery] = useState("")
   const [composer, setComposer] = useState("")
@@ -136,6 +156,19 @@ function App() {
     () => sessions.find((session) => session.id === selectedID) ?? null,
     [sessions, selectedID]
   )
+  const selectedDiff = useMemo(
+    () => diffFiles.find((file) => file.file === selectedDiffFile) ?? diffFiles[0] ?? null,
+    [diffFiles, selectedDiffFile]
+  )
+  const projectPath = projectDashboard?.project
+    ? pickString(projectDashboard.project.path) || pickString(projectDashboard.project.directory) || pickString(projectDashboard.project.root)
+    : null
+  const projectName = projectDashboard?.project
+    ? pickString(projectDashboard.project.name) || (projectPath ? projectPath.split("/").filter(Boolean).pop() ?? projectPath : null)
+    : null
+  const vcsBranch = projectDashboard?.vcs
+    ? pickString(projectDashboard.vcs.branch) || pickString(projectDashboard.vcs.status) || summarizeJson(projectDashboard.vcs)
+    : null
 
   const filteredSessions = useMemo(() => {
     const text = query.trim().toLowerCase()
@@ -176,6 +209,10 @@ function App() {
     setSelectedID(sessionID)
     setMessages([])
     setTodos([])
+    setDiffFiles([])
+    setSelectedDiffFile(null)
+    setProjectDashboard(null)
+    setDashboardError(null)
     setAwaitingAssistantReply(false)
     setRuntimeError(null)
     setView("detail")
@@ -256,12 +293,33 @@ function App() {
   }
 
   async function loadSelected(sessionID: string, directory: string) {
-    const [msg, todo] = await Promise.all([
+    const [msg, todo, diff] = await Promise.all([
       api.loadMessages(config, sessionID, directory),
-      api.loadTodo(config, sessionID)
+      api.loadTodo(config, sessionID),
+      api.loadDiff(config, sessionID).catch(() => [])
     ])
     setMessages(msg)
     setTodos(todo)
+    setDiffFiles(diff)
+    setSelectedDiffFile((current) => (current && diff.some((file) => file.file === current) ? current : diff[0]?.file ?? null))
+    await loadProjectDashboard(directory)
+  }
+
+  async function loadProjectDashboard(directory: string) {
+    setLoadingProjectDashboard(true)
+    setDashboardError(null)
+    try {
+      const [project, vcs, fileStatus] = await Promise.all([
+        api.loadProjectCurrent(config, directory).catch(() => null),
+        api.loadVcs(config, directory).catch(() => null),
+        api.loadFileStatus(config, directory).catch(() => [])
+      ])
+      setProjectDashboard({ project, vcs, files: toFileStatusList(fileStatus) })
+    } catch (err) {
+      setDashboardError((err as Error).message)
+    } finally {
+      setLoadingProjectDashboard(false)
+    }
   }
 
   function syncChatBottomClearance() {
@@ -350,6 +408,10 @@ function App() {
         setSelectedID(null)
         setMessages([])
         setTodos([])
+        setDiffFiles([])
+        setSelectedDiffFile(null)
+        setProjectDashboard(null)
+        setDashboardError(null)
         setView("sessions")
       }
       setSessionToDelete(null)
@@ -706,6 +768,72 @@ function App() {
                 )}
               </div>
             </div>
+
+          {selectedSession && (
+            <section className="project-dashboard" aria-label={t('detail.projectDashboardLabel')}>
+              <div className="dashboard-card">
+                <span className="dashboard-label">{t('detail.projectLabel')}</span>
+                <strong>{projectName || selectedSession.directory}</strong>
+                <small>{projectPath || selectedSession.directory}</small>
+              </div>
+              <div className="dashboard-card">
+                <span className="dashboard-label">{t('detail.vcsLabel')}</span>
+                <strong>{loadingProjectDashboard ? t('detail.loadingProject') : vcsBranch || t('detail.unavailable')}</strong>
+                {projectDashboard?.vcs && (
+                  <small>
+                    {t('detail.aheadBehind', { ahead: projectDashboard.vcs.ahead ?? 0, behind: projectDashboard.vcs.behind ?? 0 })}
+                  </small>
+                )}
+              </div>
+              <div className="dashboard-card">
+                <span className="dashboard-label">{t('detail.fileStatusLabel')}</span>
+                <strong>{projectDashboard?.files.length ?? 0}</strong>
+                <small>{dashboardError ? t('detail.dashboardError', { message: dashboardError }) : t('detail.fileStatusSource')}</small>
+              </div>
+            </section>
+          )}
+
+          {diffFiles.length > 0 && (
+            <section className="diff-panel" aria-label={t('detail.miniDiffAria')}>
+              <div className="diff-panel-header">
+                <div>
+                  <h3>{t('detail.changedFilesTitle')}</h3>
+                  <p className="subtle">{t('detail.changedFilesHint')}</p>
+                </div>
+                <span className="change-summary">
+                  <strong>{t('detail.filesCount', { count: diffFiles.length })}</strong>
+                  <strong className="positive">+{diffFiles.reduce((sum, file) => sum + file.additions, 0)}</strong>
+                  <strong className="negative">-{diffFiles.reduce((sum, file) => sum + file.deletions, 0)}</strong>
+                </span>
+              </div>
+              <div className="diff-file-list">
+                {diffFiles.map((file) => (
+                  <button
+                    type="button"
+                    key={file.file}
+                    className={selectedDiff?.file === file.file ? "diff-file active" : "diff-file"}
+                    onClick={() => setSelectedDiffFile(file.file)}
+                  >
+                    <span>{file.file}</span>
+                    <span>
+                      <strong className="positive">+{file.additions}</strong>{" "}
+                      <strong className="negative">-{file.deletions}</strong>
+                    </span>
+                  </button>
+                ))}
+              </div>
+              {selectedDiff && (
+                <div className="mini-diff-card">
+                  <strong>{selectedDiff.file}</strong>
+                  <div className="mini-diff-bars" aria-hidden="true">
+                    <span className="mini-diff-add" style={{ flexGrow: Math.max(selectedDiff.additions, 1) }} />
+                    <span className="mini-diff-del" style={{ flexGrow: Math.max(selectedDiff.deletions, 1) }} />
+                  </div>
+                  <p className="subtle">{t('detail.linesAddedDeleted', { additions: selectedDiff.additions, deletions: selectedDiff.deletions })}</p>
+                </div>
+              )}
+            </section>
+          )}
 
           {todos.length > 0 && (
             <div className="todo-box">

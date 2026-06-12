@@ -20,5 +20,16 @@ assert.equal(zh('session.deleteTitle'), '刪除工作階段？')
 
 // Unknown keys should remain visible during development instead of rendering blank UI.
 assert.equal(en('missing.key'), 'missing.key')
+assert.equal(en('detail.opencode'), '🤖 OpenCode')
+assert.equal(it('detail.changedFilesTitle'), 'File modificati')
+assert.equal(zh('detail.changedFilesTitle'), '已變更檔案')
+assert.equal(en('detail.linesAddedDeleted', { additions: 3, deletions: 1 }), '+3 lines · -1 lines')
+assert.equal(it('detail.aheadBehind', { ahead: 1, behind: 2 }), '1 avanti · 2 indietro')
+assert.equal(zh('detail.fileStatusSource'), '來自 /file/status')
+assert.equal(en('detail.fileStatusLabel'), 'Changed files')
+assert.equal(it('detail.fileStatusLabel'), 'File modificati')
+assert.equal(zh('detail.fileStatusLabel'), '已變更檔案')
+
+assert.equal(en('todo.title'), 'Todo Items')
 
 console.log('i18n tests passed')

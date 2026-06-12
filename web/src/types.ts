@@ -62,6 +62,32 @@ export type DiffFile = {
   deletions: number
 }
 
+export type ProjectCurrent = Record<string, unknown> & {
+  name?: string
+  path?: string
+  directory?: string
+  root?: string
+}
+
+export type VcsStatus = Record<string, unknown> & {
+  branch?: string
+  status?: string
+  ahead?: number
+  behind?: number
+}
+
+export type FileStatusEntry = Record<string, unknown> & {
+  path?: string
+  file?: string
+  status?: string
+}
+
+export type ProjectDashboard = {
+  project: ProjectCurrent | null
+  vcs: VcsStatus | null
+  files: FileStatusEntry[]
+}
+
 export type SessionView = {
   id: string
   title: string
