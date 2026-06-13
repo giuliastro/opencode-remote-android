@@ -132,6 +132,25 @@ function formatLimit(value?: number): string {
   return String(value)
 }
 
+function createOptimisticUserMessage(sessionID: string, text: string): MessageEnvelope {
+  const now = Date.now()
+  return {
+    info: {
+      id: `optimistic-${now}`,
+      role: "user",
+      sessionID,
+      time: { created: now }
+    },
+    parts: [
+      {
+        id: `optimistic-part-${now}`,
+        type: "text",
+        text
+      }
+    ]
+  }
+}
+
 function App() {
   type NoticeType = "info" | "success" | "error"
 
@@ -165,6 +184,7 @@ function App() {
   const [sessions, setSessions] = useState<SessionView[]>([])
   const [selectedID, setSelectedID] = useState<string | null>(null)
   const [messages, setMessages] = useState<MessageEnvelope[]>([])
+  const [optimisticUserMessages, setOptimisticUserMessages] = useState<MessageEnvelope[]>([])
   const [todos, setTodos] = useState<TodoItem[]>([])
   const [diffFiles, setDiffFiles] = useState<DiffFile[]>([])
   const [selectedDiffFile, setSelectedDiffFile] = useState<string | null>(null)
@@ -239,10 +259,10 @@ function App() {
   }, [sessions, query])
 
   const renderedMessages = useMemo(() => {
-    return messages
+    return [...messages, ...optimisticUserMessages]
       .map((message) => ({ ...message, text: extractText(message) }))
       .filter((message) => message.text)
-  }, [messages])
+  }, [messages, optimisticUserMessages])
 
   const messageScrollSignature = useMemo(() => {
     return renderedMessages.map((message) => `${message.info.id}:${message.text.length}`).join("|")
@@ -287,6 +307,7 @@ function App() {
     sessionsScrollYRef.current = window.scrollY
     setSelectedID(sessionID)
     setMessages([])
+    setOptimisticUserMessages([])
     setTodos([])
     setDiffFiles([])
     setSelectedDiffFile(null)
@@ -519,8 +540,11 @@ function App() {
     const text = composer.trim()
     if (!text) return
     setComposer("")
+    const optimisticMessage = createOptimisticUserMessage(selectedSession.id, text)
+    setOptimisticUserMessages((current) => [...current, optimisticMessage])
     awaitingAssistantBaselineRef.current = assistantResponseSignature
     setAwaitingAssistantReply(true)
+    scrollMessagesToBottom("smooth")
 
     setBusySending(true)
     setRuntimeError(null)
@@ -535,8 +559,11 @@ function App() {
         await api.sendPrompt(config, selectedSession.id, text, selectedSession.directory, activeModel)
       }
       await loadSelected(selectedSession.id, selectedSession.directory)
+      setOptimisticUserMessages((current) => current.filter((message) => message.info.id !== optimisticMessage.info.id))
       await refreshSessions()
     } catch (err) {
+      setOptimisticUserMessages((current) => current.filter((message) => message.info.id !== optimisticMessage.info.id))
+      setComposer((current) => current || text)
       setRuntimeError((err as Error).message)
     } finally {
       setBusySending(false)
@@ -549,6 +576,7 @@ function App() {
       if (selectedID === sessionID) {
         setSelectedID(null)
         setMessages([])
+        setOptimisticUserMessages([])
         setTodos([])
         setDiffFiles([])
         setSelectedDiffFile(null)
