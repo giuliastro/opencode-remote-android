@@ -8,6 +8,8 @@ const styles = readFileSync(new URL('./styles.css', import.meta.url), 'utf8')
 
 assert.ok(api.includes('listModels(config: ServerConfig'), 'API should expose configured OpenCode models')
 assert.ok(api.includes('withDirectory("/config/providers"'), 'model list should use official /config/providers with directory scoping')
+assert.ok(api.includes('`/session/${sessionID}/prompt_async`'), 'chat prompts should use OpenCode async prompt endpoint')
+assert.ok(api.includes('return request<boolean>(config, withDirectory(`/session/${sessionID}/prompt_async`, directory)'), 'async prompt should return after 204 instead of waiting for assistant output')
 assert.ok(api.includes('model: toModelBody(model)'), 'prompt requests should send selected model object')
 assert.ok(api.includes('variant: model?.variant || undefined'), 'prompt requests should preserve selected model variant')
 assert.ok(api.includes('toCreateSessionModel'), 'new sessions should be creatable with the selected model')

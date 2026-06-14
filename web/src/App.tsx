@@ -163,6 +163,15 @@ function createOptimisticUserMessage(sessionID: string, text: string): MessageEn
   }
 }
 
+function hasMatchingUserMessage(messages: MessageEnvelope[], optimistic: MessageEnvelope): boolean {
+  const text = extractText(optimistic)
+  return messages.some((message) => (
+    message.info.sessionID === optimistic.info.sessionID &&
+    message.info.role === "user" &&
+    extractText(message) === text
+  ))
+}
+
 function App() {
   type NoticeType = "info" | "success" | "error"
 
@@ -490,6 +499,7 @@ function App() {
       if (assistantPayloadLength(current) > assistantPayloadLength(msg)) return current
       return msg
     })
+    setOptimisticUserMessages((current) => current.filter((message) => !hasMatchingUserMessage(msg, message)))
     setTodos(todo)
     setDiffFiles(diff)
     setSelectedDiffFile((current) => (current && diff.some((file) => file.file === current) ? current : diff[0]?.file ?? null))
@@ -625,11 +635,12 @@ function App() {
         const args = normalized.slice(command.length).trim()
         if (!command) return
         await api.sendCommand(config, selectedSession.id, command, args, selectedSession.directory, activeModel)
+        await loadSelected(selectedSession.id, selectedSession.directory)
+        setOptimisticUserMessages((current) => current.filter((message) => message.info.id !== optimisticMessage.info.id))
       } else {
         await api.sendPrompt(config, selectedSession.id, text, selectedSession.directory, activeModel)
+        await loadSelected(selectedSession.id, selectedSession.directory)
       }
-      await loadSelected(selectedSession.id, selectedSession.directory)
-      setOptimisticUserMessages((current) => current.filter((message) => message.info.id !== optimisticMessage.info.id))
       await refreshSessions()
     } catch (err) {
       completionShouldPlayRef.current = false

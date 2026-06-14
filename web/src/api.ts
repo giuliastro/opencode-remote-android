@@ -236,7 +236,7 @@ export const api = {
   },
 
   sendPrompt(config: ServerConfig, sessionID: string, text: string, directory?: string, model?: ModelSelection) {
-    return request<MessageEnvelope>(config, withDirectory(`/session/${sessionID}/message`, directory), {
+    return request<boolean>(config, withDirectory(`/session/${sessionID}/prompt_async`, directory), {
       method: "POST",
       body: { parts: [{ type: "text", text }], model: toModelBody(model), variant: model?.variant || undefined }
     })
