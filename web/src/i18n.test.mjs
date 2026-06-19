@@ -30,6 +30,9 @@ assert.equal(en('detail.fileStatusLabel'), 'Changed files')
 assert.equal(it('detail.fileStatusLabel'), 'File modificati')
 assert.equal(zh('detail.fileStatusLabel'), '已變更檔案')
 
+assert.equal(en('settings.theme'), 'Theme')
+assert.equal(it('settings.themeDark'), 'Scuro')
+assert.equal(zh('settings.themeSystem'), '跟隨系統')
 assert.equal(en('todo.title'), 'Todo Items')
 
 console.log('i18n tests passed')

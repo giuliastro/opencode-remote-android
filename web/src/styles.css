@@ -17,6 +17,15 @@
   --danger-soft: #fae9e7;
   --warning: #9a6700;
   --warning-soft: #fff3cf;
+  --nav-bg: rgba(255, 255, 255, 0.94);
+  --bottom-nav-bg: rgba(255, 255, 255, 0.96);
+  --primary-border: #c9ddff;
+  --danger-border: #f0c2be;
+  --focus-ring: rgba(23, 105, 224, 0.2);
+  --code-bg: #111827;
+  --code-text: #f9fafb;
+  --modal-backdrop: rgba(20, 32, 51, 0.45);
+  --sheet-backdrop: rgba(20, 32, 51, 0.38);
   --font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
   --font-mono: "Cascadia Code", "SF Mono", Consolas, monospace;
   --space-1: 0.25rem;
@@ -34,6 +43,39 @@
   --z-sticky: 20;
   --z-modal-backdrop: 40;
   --z-modal: 50;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0b1120;
+  --surface: #111827;
+  --surface-subtle: #172033;
+  --surface-strong: #1f2937;
+  --border: #2d3a4f;
+  --border-strong: #435169;
+  --text: #e5edf7;
+  --muted: #9aa7ba;
+  --muted-strong: #c5cedb;
+  --primary: #60a5fa;
+  --primary-strong: #93c5fd;
+  --primary-soft: rgba(96, 165, 250, 0.16);
+  --success: #34d399;
+  --success-soft: rgba(18, 128, 92, 0.2);
+  --danger: #f87171;
+  --danger-soft: rgba(194, 65, 59, 0.2);
+  --warning: #fbbf24;
+  --warning-soft: rgba(154, 103, 0, 0.22);
+  --nav-bg: rgba(17, 24, 39, 0.94);
+  --bottom-nav-bg: rgba(17, 24, 39, 0.96);
+  --primary-border: rgba(96, 165, 250, 0.36);
+  --danger-border: rgba(248, 113, 113, 0.42);
+  --focus-ring: rgba(96, 165, 250, 0.28);
+  --code-bg: #020617;
+  --code-text: #e5edf7;
+  --modal-backdrop: rgba(2, 6, 23, 0.66);
+  --sheet-backdrop: rgba(2, 6, 23, 0.58);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --shadow-md: 0 12px 28px rgba(0, 0, 0, 0.38);
 }
 
 * {
@@ -113,7 +155,7 @@ input:focus,
 textarea:focus,
 select:focus,
 button:focus-visible {
-  outline: 3px solid rgba(23, 105, 224, 0.2);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
   border-color: var(--primary);
 }
@@ -178,7 +220,7 @@ p {
   padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--nav-bg);
   box-shadow: var(--shadow-sm);
   backdrop-filter: blur(14px);
 }
@@ -231,7 +273,7 @@ p {
 .bottom-nav button.active {
   color: var(--primary);
   background: var(--primary-soft);
-  border-color: #c9ddff;
+  border-color: var(--primary-border);
 }
 
 .panel {
@@ -280,7 +322,7 @@ p {
 
 .btn-danger {
   background: var(--danger-soft);
-  border-color: #f0c2be;
+  border-color: var(--danger-border);
   color: var(--danger);
 }
 
@@ -427,7 +469,7 @@ p {
 
 .session-card.active {
   border-color: var(--primary);
-  background: #f8fbff;
+  background: var(--surface-subtle);
 }
 
 .session-card-main {
@@ -732,7 +774,7 @@ p {
 .message.user {
   align-self: flex-end;
   background: var(--primary-soft);
-  border-color: #c9ddff;
+  border-color: var(--primary-border);
 }
 
 .message.assistant {
@@ -811,7 +853,7 @@ p {
   padding: var(--space-3);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--nav-bg);
   box-shadow: var(--shadow-md);
   backdrop-filter: blur(14px);
 }
@@ -906,7 +948,7 @@ p {
   align-items: center;
   justify-content: center;
   padding: var(--space-4);
-  background: rgba(20, 32, 51, 0.45);
+  background: var(--modal-backdrop);
 }
 
 .modal-card {
@@ -938,7 +980,7 @@ p {
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  background: rgba(20, 32, 51, 0.38);
+  background: var(--sheet-backdrop);
 }
 
 .bottom-sheet {
@@ -1024,8 +1066,8 @@ button.compact {
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
-  background: #111827;
-  color: #f9fafb;
+  background: var(--code-bg);
+  color: var(--code-text);
   padding: var(--space-3);
   font-family: var(--font-mono);
   font-size: 0.84rem;
@@ -1221,7 +1263,7 @@ button.compact {
     gap: var(--space-1);
     border: 1px solid var(--border);
     border-radius: var(--radius-lg);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--bottom-nav-bg);
     box-shadow: var(--shadow-md);
     padding: var(--space-1);
     backdrop-filter: blur(14px);

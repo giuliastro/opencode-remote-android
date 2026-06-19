@@ -67,6 +67,16 @@ assert.ok(api.includes('loadTodo(config: ServerConfig, sessionID: string, direct
 assert.ok(api.includes('loadDiff(config: ServerConfig, sessionID: string, directory?: string)'), 'diff requests should be directory-aware')
 assert.ok(api.includes('abort(config: ServerConfig, sessionID: string, directory?: string)'), 'abort requests should be directory-aware')
 
+assert.ok(app.includes('THEME_STORAGE_KEY'), 'theme preference should persist separately from server settings')
+assert.ok(app.includes('type ThemePreference = "system" | "light" | "dark"'), 'theme preference should support system, light, and dark')
+assert.ok(app.includes('window.matchMedia("(prefers-color-scheme: dark)"'), 'system theme should follow prefers-color-scheme')
+assert.ok(app.includes('document.documentElement.dataset.theme = resolvedTheme'), 'theme should be applied to the root element for CSS variables')
+assert.ok(app.includes("t('settings.theme')"), 'settings should expose a localized theme picker')
+assert.ok(styles.includes(':root[data-theme="dark"]'), 'dark mode should override design tokens through CSS variables')
+assert.ok(styles.includes('--nav-bg'), 'theme-sensitive navigation background should use a variable')
+assert.ok(styles.includes('--primary-border'), 'theme-sensitive active borders should use a variable')
+assert.ok(styles.includes('--focus-ring'), 'theme-sensitive focus ring should use a variable')
+
 assert.match(icons, /export const RefreshIcon/, 'RefreshIcon should exist for idle refresh UI')
 
 console.log('ui regression tests passed')

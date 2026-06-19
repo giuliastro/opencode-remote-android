@@ -28,6 +28,10 @@ type TranslationKey =
   | 'settings.connectionFailed'
   | 'settings.connectedTo'
   | 'settings.language'
+  | 'settings.theme'
+  | 'settings.themeSystem'
+  | 'settings.themeLight'
+  | 'settings.themeDark'
   | 'settings.draftHint'
   | 'settings.testedNotSaved'
   | 'settings.savedButton'
@@ -171,6 +175,10 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'settings.connectionFailed': 'Connection failed: {message}',
     'settings.connectedTo': 'Connected to OpenCode {version}',
     'settings.language': 'Language',
+    'settings.theme': 'Theme',
+    'settings.themeSystem': 'System',
+    'settings.themeLight': 'Light',
+    'settings.themeDark': 'Dark',
     'sessions.title': 'Sessions',
     'sessions.summary': '{total} total · {active} active · {changed} changed',
     'sessions.new': 'New Session',
@@ -298,6 +306,10 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'settings.connectionFailed': 'Connessione fallita: {message}',
     'settings.connectedTo': 'Connesso a OpenCode {version}',
     'settings.language': 'Lingua',
+    'settings.theme': 'Tema',
+    'settings.themeSystem': 'Sistema',
+    'settings.themeLight': 'Chiaro',
+    'settings.themeDark': 'Scuro',
     'sessions.title': 'Sessioni',
     'sessions.summary': '{total} totali · {active} attive · {changed} con modifiche',
     'sessions.new': 'Nuova sessione',
@@ -425,6 +437,10 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'settings.connectionFailed': '連線失敗：{message}',
     'settings.connectedTo': '已連線至 OpenCode {version}',
     'settings.language': '語言',
+    'settings.theme': '主題',
+    'settings.themeSystem': '跟隨系統',
+    'settings.themeLight': '淺色',
+    'settings.themeDark': '深色',
     'sessions.title': '工作階段',
     'sessions.summary': '{total} 總數 · {active} 進行中 · {changed} 有變更',
     'sessions.new': '新增工作階段',

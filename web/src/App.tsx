@@ -21,6 +21,7 @@ import {
 const STORAGE_KEY = "opencode.remote.server"
 const LANGUAGE_STORAGE_KEY = "opencode.remote.language"
 const MODEL_STORAGE_KEY = "opencode.remote.model"
+const THEME_STORAGE_KEY = "opencode.remote.theme"
 const NEW_SESSION_DIRECTORY_STORAGE_KEY = "opencode.remote.newSessionDirectory"
 
 const defaultConfig: ServerConfig = {
@@ -174,6 +175,7 @@ function hasMatchingUserMessage(messages: MessageEnvelope[], optimistic: Message
 
 function App() {
   type NoticeType = "info" | "success" | "error"
+  type ThemePreference = "system" | "light" | "dark"
 
   const [config, setConfig] = useState<ServerConfig>(() => {
     const saved = localStorage.getItem(STORAGE_KEY)
@@ -186,6 +188,10 @@ function App() {
   })
   const [language, setLanguage] = useState<LanguageCode>(() => {
     return normalizeLanguage(localStorage.getItem(LANGUAGE_STORAGE_KEY) || navigator.language)
+  })
+  const [theme, setTheme] = useState<ThemePreference>(() => {
+    const saved = localStorage.getItem(THEME_STORAGE_KEY)
+    return saved === "light" || saved === "dark" || saved === "system" ? saved : "system"
   })
   const t = useMemo(() => createTranslator(language), [language])
 
@@ -692,6 +698,21 @@ function App() {
   }, [language])
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+
+    function applyThemePreference() {
+      const resolvedTheme = theme === "system" && mediaQuery.matches ? "dark" : theme === "dark" ? "dark" : "light"
+      document.documentElement.dataset.theme = resolvedTheme
+      document.documentElement.style.colorScheme = resolvedTheme
+    }
+
+    localStorage.setItem(THEME_STORAGE_KEY, theme)
+    applyThemePreference()
+    mediaQuery.addEventListener("change", applyThemePreference)
+    return () => mediaQuery.removeEventListener("change", applyThemePreference)
+  }, [theme])
+
+  useEffect(() => {
     localStorage.setItem(NEW_SESSION_DIRECTORY_STORAGE_KEY, newSessionDirectory)
   }, [newSessionDirectory])
 
@@ -819,6 +840,19 @@ function App() {
               {languageOptions.map((option) => (
                 <option key={option.code} value={option.code}>{option.label}</option>
               ))}
+            </select>
+          </label>
+
+          <label htmlFor="theme">
+            {t('settings.theme')}
+            <select
+              id="theme"
+              value={theme}
+              onChange={(event) => setTheme(event.target.value as ThemePreference)}
+            >
+              <option value="system">{t('settings.themeSystem')}</option>
+              <option value="light">{t('settings.themeLight')}</option>
+              <option value="dark">{t('settings.themeDark')}</option>
             </select>
           </label>
           
