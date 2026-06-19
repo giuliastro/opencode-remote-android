@@ -77,6 +77,10 @@ assert.ok(styles.includes('--nav-bg'), 'theme-sensitive navigation background sh
 assert.ok(styles.includes('--primary-border'), 'theme-sensitive active borders should use a variable')
 assert.ok(styles.includes('--focus-ring'), 'theme-sensitive focus ring should use a variable')
 
+assert.ok(app.includes('ReactMarkdown'), 'messages should use a maintained Markdown renderer')
+assert.ok(app.includes('remarkGfm'), 'messages should support GitHub-flavored Markdown')
+assert.ok(/\.message-content pre[\s\S]*?overflow-x:\s*auto/.test(styles), 'fenced code blocks should render as scrollable blocks')
+
 assert.match(icons, /export const RefreshIcon/, 'RefreshIcon should exist for idle refresh UI')
 
 console.log('ui regression tests passed')

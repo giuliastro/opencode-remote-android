@@ -830,6 +830,24 @@ p {
   color: var(--text);
 }
 
+.message-content pre {
+  margin-top: var(--space-2);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: var(--space-3);
+  white-space: pre;
+}
+
+.message-content pre code {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+}
+
 .message code,
 .help code,
 .command-name {

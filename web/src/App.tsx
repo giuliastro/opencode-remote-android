@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import ReactMarkdown from "react-markdown"
+import remarkGfm from "remark-gfm"
 import { api } from "./api"
 import { createTranslator, languageOptions, normalizeLanguage, type LanguageCode } from "./i18n"
 import type { CommandInfo, DiffFile, FileEntry, FileStatusEntry, MessageEnvelope, ModelOption, ModelSelection, ProjectDashboard, ServerConfig, SessionView, TodoItem } from "./types"
@@ -50,44 +52,8 @@ function assistantPayloadLength(items: MessageEnvelope[]): number {
     .reduce((sum, message) => sum + extractText(message).length, 0)
 }
 
-function renderInline(text: string) {
-  const codeChunks = text.split(/(`[^`]+`)/g)
-  return codeChunks.map((chunk, index) => {
-    if (chunk.startsWith("`") && chunk.endsWith("`")) {
-      return <code key={`code-${index}`}>{chunk.slice(1, -1)}</code>
-    }
-
-    const nodes = []
-    const boldPattern = /\*\*(.+?)\*\*/g
-    let cursor = 0
-    let match: RegExpExecArray | null = boldPattern.exec(chunk)
-
-    while (match) {
-      if (match.index > cursor) {
-        nodes.push(<span key={`text-${index}-${cursor}`}>{chunk.slice(cursor, match.index)}</span>)
-      }
-      nodes.push(<strong key={`bold-${index}-${match.index}`}>{match[1]}</strong>)
-      cursor = match.index + match[0].length
-      match = boldPattern.exec(chunk)
-    }
-
-    if (cursor < chunk.length) {
-      nodes.push(<span key={`tail-${index}-${cursor}`}>{chunk.slice(cursor)}</span>)
-    }
-
-    if (nodes.length === 0) {
-      return <span key={`empty-${index}`}>{chunk}</span>
-    }
-    return <span key={`inline-${index}`}>{nodes}</span>
-  })
-}
-
-function toDisplayLines(text: string): string[] {
-  const normalized = text.includes("\n") ? text : text.replace(/\s-\s(?=\S)/g, "\n- ")
-  return normalized
-    .split("\n")
-    .map((line) => line.trimEnd())
-    .filter((line, idx, arr) => line.length > 0 || (idx > 0 && arr[idx - 1].length > 0))
+function normalizeMessageMarkdown(text: string): string {
+  return text.includes("\n") ? text : text.replace(/\s-\s(?=\S)/g, "\n- ")
 }
 
 function toFileStatusList(input: FileStatusEntry[] | Record<string, FileStatusEntry>): FileStatusEntry[] {
@@ -1224,24 +1190,21 @@ function App() {
               </div>
             ) : (
               <>
-                {renderedMessages.map((message) => {
-                  const lines = toDisplayLines(message.text)
-                  return (
-                    <article key={message.info.id} className={`message ${message.info.role} fade-in`}>
-                      <header>
-                        <strong>
-                          {message.info.role === "user" ? t('detail.you') : t('detail.opencode')}
-                        </strong>
-                        <small>{formatTime(message.info.time.created)}</small>
-                      </header>
-                      <div className="message-content">
-                        {lines.map((line, index) => (
-                          <p key={index}>{renderInline(line)}</p>
-                        ))}
-                      </div>
-                    </article>
-                  )
-                })}
+                {renderedMessages.map((message) => (
+                  <article key={message.info.id} className={`message ${message.info.role} fade-in`}>
+                    <header>
+                      <strong>
+                        {message.info.role === "user" ? t('detail.you') : t('detail.opencode')}
+                      </strong>
+                      <small>{formatTime(message.info.time.created)}</small>
+                    </header>
+                    <div className="message-content">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {normalizeMessageMarkdown(message.text)}
+                      </ReactMarkdown>
+                    </div>
+                  </article>
+                ))}
                 {showTypingBubble && (
                   <article className="message assistant typing-bubble fade-in" aria-label={t('detail.waiting')}>
                     <div className="typing-dots" aria-hidden="true">
