@@ -134,6 +134,25 @@ function createOptimisticUserMessage(sessionID: string, text: string): MessageEn
   }
 }
 
+function createLocalAssistantMessage(sessionID: string, text: string): MessageEnvelope {
+  const now = Date.now()
+  return {
+    info: {
+      id: `local-assistant-${now}`,
+      role: "assistant",
+      sessionID,
+      time: { created: now, completed: now }
+    },
+    parts: [
+      {
+        id: `local-assistant-part-${now}`,
+        type: "text",
+        text
+      }
+    ]
+  }
+}
+
 function hasMatchingUserMessage(messages: MessageEnvelope[], optimistic: MessageEnvelope): boolean {
   const text = extractText(optimistic)
   return messages.some((message) => (
@@ -168,6 +187,7 @@ function App() {
   const [draftConfig, setDraftConfig] = useState<ServerConfig>(config)
   const [connectedVersion, setConnectedVersion] = useState<string>("")
   const [commands, setCommands] = useState<CommandInfo[]>([])
+  const [commandFilter, setCommandFilter] = useState<"all" | "skill">("all")
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
   const [modelLoadError, setModelLoadError] = useState<string | null>(null)
   const [selectedModelKey, setSelectedModelKey] = useState<string | null>(() => localStorage.getItem(MODEL_STORAGE_KEY))
@@ -269,6 +289,10 @@ function App() {
       return session.title.toLowerCase().includes(text) || session.directory.toLowerCase().includes(text)
     })
   }, [sessions, query])
+  const displayedCommands = useMemo(() => {
+    if (commandFilter === "skill") return commands.filter((command) => command.source === "skill")
+    return commands
+  }, [commands, commandFilter])
   const selectedNewSessionDirectory = normalizeDirectory(newSessionDirectory)
 
   const renderedMessages = useMemo(() => {
@@ -600,6 +624,87 @@ function App() {
     if (!selectedSession) return
     const text = composer.trim()
     if (!text) return
+
+    if (text.startsWith("/")) {
+      const normalized = text.slice(1)
+      const command = normalized.split(" ")[0]?.trim() ?? ""
+      const args = normalized.slice(command.length).trim()
+      const localCommand = command.toLowerCase()
+
+      if (localCommand === "help" || localCommand === "commands" || localCommand === "skills") {
+        setComposer("")
+        setRuntimeError(null)
+        setCommandFilter(localCommand === "skills" ? "skill" : "all")
+        setHelpPage("commands")
+        setView("help")
+        return
+      }
+
+      if (!command) return
+
+      if (localCommand === "status") {
+        const status = [
+          `Connection: ${connectionStatusText || connectionState}`,
+          `Server: ${hasConfiguredServer ? `${config.host}:${config.port}` : "not configured"}`,
+          `Session: ${selectedSession.title} (${selectedSession.status})`,
+          `Directory: ${selectedSession.directory}`,
+          `Model: ${activeModelOption ? `${activeModelOption.providerName} / ${activeModelOption.modelName}` : "default"}`
+        ].join("\n")
+        setComposer("")
+        setRuntimeError(null)
+        setOptimisticUserMessages((current) => [
+          ...current,
+          createOptimisticUserMessage(selectedSession.id, text),
+          createLocalAssistantMessage(selectedSession.id, status)
+        ])
+        scrollMessagesToBottom("smooth")
+        return
+      }
+
+      let availableCommands = commands
+      if (availableCommands.length === 0) {
+        try {
+          availableCommands = await api.listCommands(config)
+          setCommands(availableCommands)
+        } catch (err) {
+          setRuntimeError(`Cannot load server commands: ${(err as Error).message}`)
+          return
+        }
+      }
+
+      if (!availableCommands.some((item) => item.name === command)) {
+        const available = availableCommands.map((item) => `/${item.name}`).join(", ")
+        setRuntimeError(`Command not found: "/${command}". Available commands: ${available}`)
+        return
+      }
+
+      setComposer("")
+      const optimisticMessage = createOptimisticUserMessage(selectedSession.id, text)
+      setOptimisticUserMessages((current) => [...current, optimisticMessage])
+      awaitingAssistantBaselineRef.current = assistantResponseSignature
+      completionShouldPlayRef.current = true
+      setAwaitingAssistantReply(true)
+      scrollMessagesToBottom("smooth")
+
+      setBusySending(true)
+      setRuntimeError(null)
+      try {
+        await api.sendCommand(config, selectedSession.id, command, args, selectedSession.directory, activeModel)
+        await loadSelected(selectedSession.id, selectedSession.directory)
+        setOptimisticUserMessages((current) => current.filter((message) => message.info.id !== optimisticMessage.info.id))
+        await refreshSessions()
+      } catch (err) {
+        completionShouldPlayRef.current = false
+        setAwaitingAssistantReply(false)
+        setOptimisticUserMessages((current) => current.filter((message) => message.info.id !== optimisticMessage.info.id))
+        setComposer((current) => current || text)
+        setRuntimeError((err as Error).message)
+      } finally {
+        setBusySending(false)
+      }
+      return
+    }
+
     setComposer("")
     const optimisticMessage = createOptimisticUserMessage(selectedSession.id, text)
     setOptimisticUserMessages((current) => [...current, optimisticMessage])
@@ -611,18 +716,8 @@ function App() {
     setBusySending(true)
     setRuntimeError(null)
     try {
-      if (text.startsWith("/")) {
-        const normalized = text.startsWith("/") ? text.slice(1) : text
-        const command = normalized.split(" ")[0]?.trim()
-        const args = normalized.slice(command.length).trim()
-        if (!command) return
-        await api.sendCommand(config, selectedSession.id, command, args, selectedSession.directory, activeModel)
-        await loadSelected(selectedSession.id, selectedSession.directory)
-        setOptimisticUserMessages((current) => current.filter((message) => message.info.id !== optimisticMessage.info.id))
-      } else {
-        await api.sendPrompt(config, selectedSession.id, text, selectedSession.directory, activeModel)
-        await loadSelected(selectedSession.id, selectedSession.directory)
-      }
+      await api.sendPrompt(config, selectedSession.id, text, selectedSession.directory, activeModel)
+      await loadSelected(selectedSession.id, selectedSession.directory)
       await refreshSessions()
     } catch (err) {
       completionShouldPlayRef.current = false
@@ -1512,7 +1607,7 @@ function App() {
             </button>
             <button 
               className={helpPage === "commands" ? "active" : ""} 
-              onClick={() => setHelpPage("commands")}
+              onClick={() => { setCommandFilter("all"); setHelpPage("commands") }}
               role="tab"
               aria-selected={helpPage === "commands"}
             >
@@ -1647,36 +1742,51 @@ http://YOUR_PC_IP:4096/global/health</pre>
           {helpPage === "commands" && (
             <div className="help-content fade-in">
               <h3>Slash Commands</h3>
-              <p>Available commands from the OpenCode server. Type these in the chat input starting with <code>/</code>:</p>
-              
-              {commands.length === 0 ? (
+              <p>Local mobile commands are handled by the app. Server commands are loaded from OpenCode and sent to <code>/session/:id/command</code>.</p>
+              <div className="example-commands">
+                <pre>/help</pre>
+                <pre>/commands</pre>
+                <pre>/skills</pre>
+                <pre>/status</pre>
+              </div>
+              <div className="help-tabs compact" role="tablist">
+                <button
+                  className={commandFilter === "all" ? "active" : ""}
+                  onClick={() => setCommandFilter("all")}
+                  role="tab"
+                  aria-selected={commandFilter === "all"}
+                >
+                  Server Commands
+                </button>
+                <button
+                  className={commandFilter === "skill" ? "active" : ""}
+                  onClick={() => setCommandFilter("skill")}
+                  role="tab"
+                  aria-selected={commandFilter === "skill"}
+                >
+                  Skills
+                </button>
+              </div>
+               
+              {displayedCommands.length === 0 ? (
                 <div className="no-commands">
                   <HelpIcon size={48} className="icon-empty-state" />
-                  <p className="subtle">No commands available</p>
-                  <p className="subtle">Connect to a server to see available commands</p>
+                  <p className="subtle">No {commandFilter === "skill" ? "skills" : "server commands"} available</p>
+                  <p className="subtle">Connect to a server to see available commands and skills</p>
                 </div>
               ) : (
                 <div className="commands-grid">
-                  {commands.map((cmd) => (
+                  {displayedCommands.map((cmd) => (
                     <div key={cmd.name} className="command-card">
                       <code className="command-name">/{cmd.name}</code>
                       {cmd.description && (
                         <p className="command-description">{cmd.description}</p>
                       )}
+                      {cmd.source && <p className="subtle">{cmd.source}</p>}
                     </div>
                   ))}
                 </div>
               )}
-              
-              <div className="command-examples">
-                <h4>💡 Usage Examples</h4>
-                <div className="example-commands">
-                  <pre>/help</pre>
-                  <pre>/status</pre>
-                  <pre>/clear</pre>
-                  <pre>/save</pre>
-                </div>
-              </div>
             </div>
           )}
           {runtimeError && <p className="error">{runtimeError}</p>}

@@ -141,4 +141,5 @@ export type SessionView = {
 export type CommandInfo = {
   name: string
   description?: string
+  source?: "command" | "mcp" | "skill"
 }

@@ -34,6 +34,23 @@ function withDirectory(path: string, directory?: string): string {
 type RequestOptions = {
   method?: "GET" | "POST" | "PATCH" | "DELETE"
   body?: unknown
+  readTimeout?: number
+}
+
+function responseDetail(body: unknown): string | null {
+  if (!body) return null
+  if (typeof body === "string") {
+    try {
+      return responseDetail(JSON.parse(body)) ?? body
+    } catch {
+      return body
+    }
+  }
+  if (typeof body === "object") {
+    const value = body as { data?: { message?: string }, message?: string }
+    return value.data?.message ?? value.message ?? JSON.stringify(body)
+  }
+  return String(body)
 }
 
 type ConfigProvidersResponse = {
@@ -75,30 +92,26 @@ async function request<T>(config: ServerConfig, path: string, options: RequestOp
   const method = options.method ?? "GET"
 
   if (Capacitor.isNativePlatform()) {
+    let response
     try {
-      const response = await CapacitorHttp.request({
+      response = await CapacitorHttp.request({
         url: target,
         method,
         headers,
         data: options.body,
         connectTimeout: 12_000,
-        readTimeout: 30_000
+        readTimeout: options.readTimeout ?? 30_000
       })
-
-      if (response.status >= 400) {
-        const body = response.data
-        const detail =
-          (typeof body === "object" && body && (body as { data?: { message?: string } }).data?.message) ||
-          (typeof body === "object" && body && (body as { message?: string }).message) ||
-          JSON.stringify(body)
-        throw new Error(detail || `HTTP ${response.status}`)
-      }
-
-      if (response.status === 204) return true as T
-      return response.data as T
     } catch {
       throw new Error(`Network error: cannot reach ${target}. Check host, port, and firewall.`)
     }
+
+    if (response.status >= 400) {
+      throw new Error(responseDetail(response.data) || `HTTP ${response.status}`)
+    }
+
+    if (response.status === 204) return true as T
+    return response.data as T
   }
 
   let response: Response
@@ -121,7 +134,7 @@ async function request<T>(config: ServerConfig, path: string, options: RequestOp
     let detail = `HTTP ${response.status}`
     try {
       const body = await response.json()
-      detail = body?.data?.message ?? body?.message ?? JSON.stringify(body)
+      detail = responseDetail(body) ?? detail
     } catch {
       const text = await response.text()
       if (text) detail = text
@@ -245,7 +258,8 @@ export const api = {
   sendCommand(config: ServerConfig, sessionID: string, command: string, argumentsText: string, directory?: string, model?: ModelSelection) {
     return request<MessageEnvelope>(config, withDirectory(`/session/${sessionID}/command`, directory), {
       method: "POST",
-      body: { command, arguments: argumentsText, model: modelWireName(model), variant: model?.variant || undefined }
+      body: { command, arguments: argumentsText, model: modelWireName(model), variant: model?.variant || undefined },
+      readTimeout: 300_000
     })
   },
 
