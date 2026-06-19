@@ -677,6 +677,56 @@ p {
   gap: var(--space-3);
 }
 
+.model-option-list {
+  display: grid;
+  gap: var(--space-2);
+  max-height: 42vh;
+  overflow-y: auto;
+}
+
+.model-option {
+  width: 100%;
+  justify-content: space-between;
+  border-color: var(--border);
+  background: var(--surface);
+  text-align: left;
+}
+
+.model-option.active {
+  border-color: var(--primary);
+  background: var(--primary-soft);
+}
+
+.model-option span {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.model-option strong,
+.model-option small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.model-option small {
+  color: var(--muted);
+}
+
+.model-option em {
+  flex: 0 0 auto;
+  color: var(--muted-strong);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.model-empty {
+  margin: 0;
+}
+
 .model-meta {
   display: flex;
   flex-wrap: wrap;
