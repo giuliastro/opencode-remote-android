@@ -99,6 +99,10 @@ function sameModel(a: ModelSelection | null | undefined, b: ModelSelection | nul
   return Boolean(a && b && a.providerID === b.providerID && a.modelID === b.modelID && (a.variant ?? "") === (b.variant ?? ""))
 }
 
+function modelSearchText(option: ModelOption): string {
+  return [option.modelName, option.modelID, option.providerName, option.providerID, option.variant ?? ""].join(" ").toLowerCase()
+}
+
 function normalizeDirectory(value: string): string | undefined {
   const trimmed = value.trim()
   return trimmed.length > 0 ? trimmed : undefined
@@ -167,6 +171,7 @@ function App() {
   const [modelOptions, setModelOptions] = useState<ModelOption[]>([])
   const [modelLoadError, setModelLoadError] = useState<string | null>(null)
   const [selectedModelKey, setSelectedModelKey] = useState<string | null>(() => localStorage.getItem(MODEL_STORAGE_KEY))
+  const [modelQuery, setModelQuery] = useState("")
   const [helpPage, setHelpPage] = useState<"overview" | "server" | "network" | "troubleshooting" | "commands">(
     "overview"
   )
@@ -251,6 +256,11 @@ function App() {
     return modelOptions.find((option) => option.isDefault) ?? modelOptions[0] ?? null
   }, [modelOptions, selectedModel, selectedSession?.model])
   const activeModel = activeModelOption ? { providerID: activeModelOption.providerID, modelID: activeModelOption.modelID, variant: activeModelOption.variant } : selectedModel ?? undefined
+  const filteredModelOptions = useMemo(() => {
+    const text = modelQuery.trim().toLowerCase()
+    if (!text) return modelOptions
+    return modelOptions.filter((option) => modelSearchText(option).includes(text))
+  }, [modelOptions, modelQuery])
 
   const filteredSessions = useMemo(() => {
     const text = query.trim().toLowerCase()
@@ -1305,21 +1315,44 @@ function App() {
                 </button>
                 {modelOptions.length > 0 ? (
                   <div className="model-controls">
-                    <label htmlFor="model-select">
+                    <label htmlFor="model-search">
                       {t('detail.modelSelectLabel')}
-                      <select
-                        id="model-select"
-                        value={activeModelOption ? modelKey(activeModelOption) : selectedModelKey ?? ""}
-                        onChange={(event) => changeModel(event.target.value)}
+                      <input
+                        id="model-search"
+                        value={modelQuery}
+                        onChange={(event) => setModelQuery(event.target.value)}
+                        placeholder={t('detail.modelSearchPlaceholder')}
                         disabled={isWorking}
-                      >
-                        {modelOptions.map((option) => (
-                          <option key={modelKey(option)} value={modelKey(option)}>
-                            {option.modelName} · {option.providerName}{option.variant ? ` · ${option.variant}` : ""}{option.isDefault ? ` · ${t('detail.modelDefault')}` : ""}
-                          </option>
-                        ))}
-                      </select>
+                        autoComplete="off"
+                      />
                     </label>
+                    <div className="model-option-list" role="listbox" aria-label={t('detail.modelSelectLabel')}>
+                      {filteredModelOptions.length > 0 ? (
+                        filteredModelOptions.map((option) => {
+                          const optionKey = modelKey(option)
+                          const active = activeModelOption ? sameModel(option, activeModelOption) : optionKey === selectedModelKey
+                          return (
+                            <button
+                              type="button"
+                              key={optionKey}
+                              className={active ? "model-option active" : "model-option"}
+                              onClick={() => changeModel(optionKey)}
+                              disabled={isWorking}
+                              role="option"
+                              aria-selected={active}
+                            >
+                              <span>
+                                <strong>{option.modelName}</strong>
+                                <small>{option.providerName}{option.variant ? ` · ${option.variant}` : ""}</small>
+                              </span>
+                              {option.isDefault && <em>{t('detail.modelDefault')}</em>}
+                            </button>
+                          )
+                        })
+                      ) : (
+                        <p className="subtle model-empty">{t('detail.modelSearchEmpty')}</p>
+                      )}
+                    </div>
                     {activeModelOption && (
                       <div className="model-meta">
                         <span>{t('detail.modelProvider', { provider: activeModelOption.providerName })}</span>

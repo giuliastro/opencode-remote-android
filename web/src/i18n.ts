@@ -102,6 +102,8 @@ type TranslationKey =
   | 'detail.modelHint'
   | 'detail.refreshModels'
   | 'detail.modelSelectLabel'
+  | 'detail.modelSearchPlaceholder'
+  | 'detail.modelSearchEmpty'
   | 'detail.modelDefault'
   | 'detail.modelProvider'
   | 'detail.modelContext'
@@ -234,6 +236,8 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'detail.modelHint': 'Applies to the next prompt and to new sessions. Current running replies keep their original model.',
     'detail.refreshModels': 'Refresh models',
     'detail.modelSelectLabel': 'Model for next prompt',
+    'detail.modelSearchPlaceholder': 'Search models by name or provider...',
+    'detail.modelSearchEmpty': 'No models match your search.',
     'detail.modelDefault': 'default',
     'detail.modelProvider': 'Provider: {provider}',
     'detail.modelContext': 'Context {context} · output {output}',
@@ -365,6 +369,8 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'detail.modelHint': 'Si applica al prossimo prompt e alle nuove sessioni. Le risposte già in corso restano sul modello originale.',
     'detail.refreshModels': 'Aggiorna modelli',
     'detail.modelSelectLabel': 'Modello per il prossimo prompt',
+    'detail.modelSearchPlaceholder': 'Cerca modelli per nome o provider...',
+    'detail.modelSearchEmpty': 'Nessun modello corrisponde alla ricerca.',
     'detail.modelDefault': 'default',
     'detail.modelProvider': 'Provider: {provider}',
     'detail.modelContext': 'Contesto {context} · output {output}',
@@ -496,6 +502,8 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'detail.modelHint': '套用到下一個提示與新工作階段。進行中的回覆仍使用原本模型。',
     'detail.refreshModels': '重新整理模型',
     'detail.modelSelectLabel': '下一個提示的模型',
+    'detail.modelSearchPlaceholder': '依名稱或提供者搜尋模型...',
+    'detail.modelSearchEmpty': '沒有符合搜尋的模型。',
     'detail.modelDefault': '預設',
     'detail.modelProvider': '提供者：{provider}',
     'detail.modelContext': '上下文 {context} · 輸出 {output}',
