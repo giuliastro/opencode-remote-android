@@ -69,6 +69,13 @@ assert.ok(api.includes('withDirectory("/session", directory)'), 'new session cre
 assert.ok(api.includes('loadTodo(config: ServerConfig, sessionID: string, directory?: string)'), 'todo requests should be directory-aware')
 assert.ok(api.includes('loadDiff(config: ServerConfig, sessionID: string, directory?: string)'), 'diff requests should be directory-aware')
 assert.ok(api.includes('abort(config: ServerConfig, sessionID: string, directory?: string)'), 'abort requests should be directory-aware')
+assert.ok(api.includes('listGlobalSessions(config: ServerConfig)'), 'sessions view should use global session discovery when available')
+assert.ok(api.includes('x-next-cursor'), 'global session discovery should page through all experimental session results')
+assert.ok(app.includes('api.listSessions(config, directory).catch(() => [] as Session[])'), 'global sessions should be hydrated from scoped session lists for fresh timestamps and summaries')
+assert.ok(api.includes('loadLatestMessage(config: ServerConfig, sessionID: string, directory?: string)'), 'API should expose a cheap latest-message request')
+assert.ok(app.includes('function messageActivityTime'), 'sessions should display latest message activity instead of mutable session row timestamps')
+assert.ok(app.includes('latestMessageTimesRef'), 'latest message activity lookups should be cached between refreshes')
+assert.ok(app.includes('catch(() => null)'), 'failed latest-message lookups should not be cached as session row timestamps')
 
 assert.ok(app.includes('THEME_STORAGE_KEY'), 'theme preference should persist separately from server settings')
 assert.ok(app.includes('type ThemePreference = "system" | "light" | "dark"'), 'theme preference should support system, light, and dark')

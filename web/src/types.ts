@@ -45,6 +45,11 @@ export type Session = {
     providerID: string
     variant?: string
   }
+  project?: {
+    id: string
+    name?: string
+    worktree: string
+  } | null
 }
 
 export type SessionStatus = {

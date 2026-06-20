@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { api } from "./api"
 import { createTranslator, languageOptions, normalizeLanguage, type LanguageCode } from "./i18n"
-import type { CommandInfo, DiffFile, FileEntry, FileStatusEntry, MessageEnvelope, ModelOption, ModelSelection, PathInfo, ProjectDashboard, ServerConfig, Session, SessionView, TodoItem } from "./types"
+import type { CommandInfo, DiffFile, FileEntry, FileStatusEntry, MessageEnvelope, ModelOption, ModelSelection, PathInfo, ProjectDashboard, ServerConfig, Session, SessionStatus, SessionView, TodoItem } from "./types"
 import {
   SettingsIcon,
   FolderIcon,
@@ -112,13 +112,17 @@ function isProjectDirectory(pathInfo: PathInfo): boolean {
   return pathInfo.worktree !== "/"
 }
 
-function toSessionView(session: Session): SessionView {
+function messageActivityTime(message: MessageEnvelope): number {
+  return Math.max(message.info.time.created, message.info.time.completed ?? 0)
+}
+
+function toSessionView(session: Session, status?: SessionStatus, activityTime = session.time.updated): SessionView {
   return {
     id: session.id,
     title: session.title,
     directory: session.directory,
-    updated: session.time.updated,
-    status: "idle",
+    updated: activityTime,
+    status: status?.type ?? "idle",
     files: session.summary?.files ?? 0,
     additions: session.summary?.additions ?? 0,
     deletions: session.summary?.deletions ?? 0,
@@ -263,6 +267,7 @@ function App() {
   const loadSelectedRequestRef = useRef(0)
   const backgroundFailureCountRef = useRef(0)
   const initialSessionLoadRef = useRef(true)
+  const latestMessageTimesRef = useRef(new Map<string, { sessionUpdated: number; activityTime: number }>())
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedID) ?? null,
@@ -421,9 +426,18 @@ function App() {
       setConnectionMessage(t('connection.loadingSessions'))
     }
     try {
-      const [items, statuses] = await Promise.all([api.listSessions(config), api.listStatuses(config)])
-      const mapped = items
-        .map((session) => ({ ...toSessionView(session), status: statuses[session.id]?.type ?? "idle" }))
+      const items = await api.listGlobalSessions(config).catch(() => api.listSessions(config))
+      const directories = [...new Set(items.map((session) => session.directory).filter(Boolean))]
+      const [sessionLists, statusMaps] = await Promise.all([
+        Promise.all(directories.map((directory) => api.listSessions(config, directory).catch(() => [] as Session[]))),
+        Promise.all(directories.map((directory) => api.listStatuses(config, directory).catch(() => ({} as Record<string, SessionStatus>))))
+      ])
+      const scopedSessions = new Map(sessionLists.flat().map((session) => [session.id, session]))
+      const statuses = Object.assign({}, ...statusMaps)
+      const hydratedItems = items.map((session) => ({ ...session, ...scopedSessions.get(session.id), project: session.project }))
+      const activityTimes = await loadSessionActivityTimes(hydratedItems)
+      const mapped = hydratedItems
+        .map((session) => toSessionView(session, statuses[session.id], activityTimes.get(session.id)))
         .sort((a, b) => b.updated - a.updated)
       setSessions((current) => {
         const selected = selectedID ? current.find((session) => session.id === selectedID) : null
@@ -498,6 +512,20 @@ function App() {
     } catch (err) {
       setModelLoadError((err as Error).message)
     }
+  }
+
+  async function loadSessionActivityTimes(items: Session[]): Promise<Map<string, number>> {
+    const results = await Promise.all(items.map(async (session) => {
+      const cached = latestMessageTimesRef.current.get(session.id)
+      if (cached?.sessionUpdated === session.time.updated) return [session.id, cached.activityTime] as const
+
+      const latest = await api.loadLatestMessage(config, session.id, session.directory).catch(() => null)
+      if (latest === null) return [session.id, session.time.updated] as const
+      const activityTime = latest.length > 0 ? Math.max(...latest.map(messageActivityTime)) : session.time.updated
+      latestMessageTimesRef.current.set(session.id, { sessionUpdated: session.time.updated, activityTime })
+      return [session.id, activityTime] as const
+    }))
+    return new Map(results)
   }
 
   function changeModel(nextKey: string) {

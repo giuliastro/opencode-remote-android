@@ -37,6 +37,11 @@ type RequestOptions = {
   readTimeout?: number
 }
 
+type ResponseWithHeaders<T> = {
+  data: T
+  headers: Record<string, string>
+}
+
 function responseDetail(body: unknown): string | null {
   if (!body) return null
   if (typeof body === "string") {
@@ -51,6 +56,13 @@ function responseDetail(body: unknown): string | null {
     return value.data?.message ?? value.message ?? JSON.stringify(body)
   }
   return String(body)
+}
+
+function normalizeHeaders(headers: Record<string, unknown> | undefined): Record<string, string> {
+  if (!headers) return {}
+  return Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [key.toLowerCase(), Array.isArray(value) ? value.join(", ") : String(value)])
+  )
 }
 
 type ConfigProvidersResponse = {
@@ -76,7 +88,7 @@ type ConfigProvidersResponse = {
   default?: Record<string, string>
 }
 
-async function request<T>(config: ServerConfig, path: string, options: RequestOptions = {}): Promise<T> {
+async function requestWithHeaders<T>(config: ServerConfig, path: string, options: RequestOptions = {}): Promise<ResponseWithHeaders<T>> {
   const target = `${baseUrl(config)}${path}`
 
   const headers: Record<string, string> = {
@@ -110,8 +122,9 @@ async function request<T>(config: ServerConfig, path: string, options: RequestOp
       throw new Error(responseDetail(response.data) || `HTTP ${response.status}`)
     }
 
-    if (response.status === 204) return true as T
-    return response.data as T
+    const responseHeaders = normalizeHeaders(response.headers)
+    if (response.status === 204) return { data: true as T, headers: responseHeaders }
+    return { data: response.data as T, headers: responseHeaders }
   }
 
   let response: Response
@@ -142,8 +155,13 @@ async function request<T>(config: ServerConfig, path: string, options: RequestOp
     throw new Error(detail)
   }
 
-  if (response.status === 204) return true as T
-  return (await response.json()) as T
+  const responseHeaders = normalizeHeaders(Object.fromEntries(response.headers.entries()))
+  if (response.status === 204) return { data: true as T, headers: responseHeaders }
+  return { data: (await response.json()) as T, headers: responseHeaders }
+}
+
+async function request<T>(config: ServerConfig, path: string, options: RequestOptions = {}): Promise<T> {
+  return (await requestWithHeaders<T>(config, path, options)).data
 }
 
 function toModelBody(model?: ModelSelection) {
@@ -168,6 +186,18 @@ export const api = {
 
   listSessions(config: ServerConfig, directory?: string) {
     return request<Session[]>(config, withDirectory("/session", directory))
+  },
+
+  async listGlobalSessions(config: ServerConfig) {
+    const sessions: Session[] = []
+    let cursor: string | undefined
+    do {
+      const path = cursor ? `/experimental/session?cursor=${encodeURIComponent(cursor)}` : "/experimental/session"
+      const response = await requestWithHeaders<Session[]>(config, path)
+      sessions.push(...response.data)
+      cursor = response.headers["x-next-cursor"]
+    } while (cursor)
+    return sessions
   },
 
   listStatuses(config: ServerConfig, directory?: string) {
@@ -226,6 +256,10 @@ export const api = {
 
   loadMessages(config: ServerConfig, sessionID: string, directory?: string) {
     return request<MessageEnvelope[]>(config, withDirectory(`/session/${sessionID}/message?limit=100`, directory))
+  },
+
+  loadLatestMessage(config: ServerConfig, sessionID: string, directory?: string) {
+    return request<MessageEnvelope[]>(config, withDirectory(`/session/${sessionID}/message?limit=1`, directory))
   },
 
   loadTodo(config: ServerConfig, sessionID: string, directory?: string) {
