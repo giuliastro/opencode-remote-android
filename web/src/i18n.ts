@@ -134,6 +134,9 @@ type TranslationKey =
   | 'session.deleteBodyPrefix'
   | 'session.cancel'
   | 'session.deleteConfirm'
+  | 'session.renameTitle'
+  | 'session.renamePlaceholder'
+  | 'session.renameConfirm'
   | 'help.title'
   | 'help.overview'
   | 'help.server'
@@ -276,6 +279,9 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'session.deleteBodyPrefix': 'This will permanently delete',
     'session.cancel': 'Cancel',
     'session.deleteConfirm': 'Delete session',
+    'session.renameTitle': 'Rename session',
+    'session.renamePlaceholder': 'Enter new name...',
+    'session.renameConfirm': 'Rename',
     'help.title': 'Help & Documentation',
     'help.overview': 'Overview',
     'help.server': 'Server',
@@ -417,6 +423,9 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'session.deleteBodyPrefix': 'Questo eliminerà definitivamente',
     'session.cancel': 'Annulla',
     'session.deleteConfirm': 'Elimina sessione',
+    'session.renameTitle': 'Rinomina sessione',
+    'session.renamePlaceholder': 'Inserisci nuovo nome...',
+    'session.renameConfirm': 'Rinomina',
     'help.title': 'Aiuto e documentazione',
     'help.overview': 'Panoramica',
     'help.server': 'Server',
@@ -558,6 +567,9 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'session.deleteBodyPrefix': '這會永久刪除',
     'session.cancel': '取消',
     'session.deleteConfirm': '刪除工作階段',
+    'session.renameTitle': '重新命名工作階段',
+    'session.renamePlaceholder': '輸入新名稱...',
+    'session.renameConfirm': '重新命名',
     'help.title': '說明與文件',
     'help.overview': '總覽',
     'help.server': '伺服器',

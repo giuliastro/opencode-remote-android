@@ -17,7 +17,9 @@ import {
   SaveIcon,
   TestIcon,
   LoadingIcon,
-  RefreshIcon
+  RefreshIcon,
+  PencilIcon,
+  CloseIcon
 } from "./Icons"
 
 const STORAGE_KEY = "opencode.remote.server"
@@ -262,6 +264,9 @@ function App() {
   const [connectionMessage, setConnectionMessage] = useState<string>("")
   const [lastTestedConfigKey, setLastTestedConfigKey] = useState<string | null>(null)
   const [sessionToDelete, setSessionToDelete] = useState<SessionView | null>(null)
+  const [renamingSessionID, setRenamingSessionID] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
+  const renameInputRef = useRef<HTMLInputElement | null>(null)
   const [activeDetailSheet, setActiveDetailSheet] = useState<null | "ai" | "details">(null)
   const messagesRef = useRef<HTMLDivElement | null>(null)
   const messagesEndRef = useRef<HTMLDivElement | null>(null)
@@ -838,6 +843,33 @@ function App() {
     }
   }
 
+  async function renameSession(sessionID: string, newTitle: string, directory: string) {
+    if (!newTitle.trim()) return
+    try {
+      await api.renameSession(config, sessionID, newTitle.trim(), directory)
+      setRenamingSessionID(null)
+      setRenameValue("")
+      await refreshSessions(true)
+    } catch (err) {
+      setRuntimeError((err as Error).message)
+    }
+  }
+
+  function startRename(session: SessionView) {
+    setRenameValue(session.title)
+    setRenamingSessionID(session.id)
+    // Focus the input after render
+    setTimeout(() => {
+      renameInputRef.current?.focus()
+      renameInputRef.current?.select()
+    }, 50)
+  }
+
+  function cancelRename() {
+    setRenamingSessionID(null)
+    setRenameValue("")
+  }
+
   async function abortSession() {
     if (!selectedSession) return
     try {
@@ -1176,7 +1208,42 @@ function App() {
                 >
                   <div className="session-card-main">
                     <div>
-                      <h3>{session.title}</h3>
+                      {renamingSessionID === session.id ? (
+                        <div className="rename-inline">
+                          <input
+                            ref={renameInputRef}
+                            value={renameValue}
+                            onChange={(event) => setRenameValue(event.target.value)}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter") {
+                                event.preventDefault()
+                                renameSession(session.id, renameValue, session.directory).catch(() => undefined)
+                              } else if (event.key === "Escape") {
+                                cancelRename()
+                              }
+                            }}
+                            onBlur={() => {
+                              // Only cancel if not clicked on save button
+                              if (renameValue === session.title || !renameValue.trim()) {
+                                cancelRename()
+                              }
+                            }}
+                            placeholder={t('session.renamePlaceholder')}
+                            className="rename-input"
+                            autoComplete="off"
+                          />
+                          <button
+                            className="btn-primary compact"
+                            onClick={() => renameSession(session.id, renameValue, session.directory).catch(() => undefined)}
+                            onMouseDown={(event) => event.preventDefault()}
+                            title={t('session.renameConfirm')}
+                          >
+                            <SaveIcon size={14} />
+                          </button>
+                        </div>
+                      ) : (
+                        <h3>{session.title}</h3>
+                      )}
                       <p>{session.directory}</p>
                     </div>
                     <span className={`pill ${session.status}`}>{session.status}</span>
@@ -1203,6 +1270,16 @@ function App() {
                     >
                       <PlayIcon size={16} />
                       {t('sessions.open')}
+                    </button>
+                    <button
+                      className="btn-secondary"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        startRename(session)
+                      }}
+                      title={t('session.renameTitle')}
+                    >
+                      <PencilIcon size={16} />
                     </button>
                     <button 
                       className="btn-danger" 
@@ -1295,10 +1372,61 @@ function App() {
               <div>
               <h2>
                 {selectedSession ? (
-                  <>
+                  <div className="detail-title-row">
                     <ChatIcon size={24} className="icon-inline-heading" />
-                    {selectedSession.title}
-                  </>
+                    {renamingSessionID === selectedSession.id ? (
+                      <div className="rename-inline">
+                        <input
+                          ref={renameInputRef}
+                          value={renameValue}
+                          onChange={(event) => setRenameValue(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault()
+                              renameSession(selectedSession.id, renameValue, selectedSession.directory).catch(() => undefined)
+                            } else if (event.key === "Escape") {
+                              cancelRename()
+                            }
+                          }}
+                          onBlur={() => {
+                            if (renameValue === selectedSession.title || !renameValue.trim()) {
+                              cancelRename()
+                            }
+                          }}
+                          placeholder={t('session.renamePlaceholder')}
+                          className="rename-input"
+                          autoComplete="off"
+                        />
+                        <button
+                          className="btn-primary compact"
+                          onClick={() => renameSession(selectedSession.id, renameValue, selectedSession.directory).catch(() => undefined)}
+                          onMouseDown={(event) => event.preventDefault()}
+                          title={t('session.renameConfirm')}
+                        >
+                          <SaveIcon size={14} />
+                        </button>
+                        <button
+                          className="btn-secondary compact"
+                          onClick={() => cancelRename()}
+                          title={t('session.cancel')}
+                        >
+                          <CloseIcon size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        {selectedSession.title}
+                        <button
+                          className="btn-icon btn-secondary compact"
+                          onClick={() => startRename(selectedSession)}
+                          title={t('session.renameTitle')}
+                          style={{ marginLeft: 'var(--space-1)' }}
+                        >
+                          <PencilIcon size={14} />
+                        </button>
+                      </>
+                    )}
+                  </div>
                 ) : (
                   t('detail.selectSession')
                 )}
