@@ -1291,9 +1291,9 @@ function App() {
                         event.stopPropagation()
                         startRename(session)
                       }}
-                      title={t('session.renameTitle')}
                     >
                       <PencilIcon size={16} />
+                      {t('session.renameTitle')}
                     </button>
                     <button 
                       className="btn-danger" 
