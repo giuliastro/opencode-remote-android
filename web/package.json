@@ -12,7 +12,8 @@
     "cap:add:android": "npx cap add android",
     "test:ui": "node src/ui-regression.test.mjs",
     "test:settings": "node src/settings-regression.test.mjs",
-    "test:model": "node src/model-regression.test.mjs"
+    "test:model": "node src/model-regression.test.mjs",
+    "test:events": "node --experimental-strip-types src/opencode-events.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
