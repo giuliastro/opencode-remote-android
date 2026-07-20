@@ -61,7 +61,7 @@ jobs:
         working-directory: web
 
       - name: Sync Capacitor project
-        run: npx cap sync android
+        run: npm run cap:sync:android
         working-directory: web
 
       - name: Read app version

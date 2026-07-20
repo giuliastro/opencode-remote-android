@@ -63,7 +63,7 @@ assert.ok(app.includes('setEventStreamState("live")'), 'app should expose live e
 assert.ok(app.includes('event-stream'), 'sessions header should visibly show the event stream state')
 assert.ok(app.includes('isNativeEventTransport()'), 'Android should select the native SSE transport instead of WebView fetch streaming')
 assert.ok(app.includes('createNativeOpenCodeEventSubscription'), 'Android should use the native event transport')
-assert.ok(styles.includes('.connection-status {\n  display: flex;'), 'connection and live-status rows should be stacked, not joined inline')
+assert.match(styles, /\.connection-status\s*\{\s*display:\s*flex;/, 'connection and live-status rows should be stacked, not joined inline')
 assert.ok(app.includes('eventType(event.data)'), 'app should unwrap the official global event envelope before filtering')
 assert.ok(app.includes('type.startsWith("session.") || type.startsWith("message.") || type.startsWith("todo.")'), 'only session/message/todo events should schedule refreshes')
 assert.ok(app.includes('setLiveEventCount((count) => count + 1)'), 'the UI should expose received application events as a counter')
