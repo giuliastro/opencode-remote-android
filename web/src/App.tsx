@@ -2,6 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { api } from "./api"
+import {
+  createFetchOpenCodeEventSubscription,
+  createNativeOpenCodeEventSubscription,
+  eventType,
+  isNativeEventTransport,
+  type EventStreamStatus
+} from "./opencode-events"
 import { createTranslator, languageOptions, normalizeLanguage, type LanguageCode } from "./i18n"
 import type { AgentOption, CommandInfo, DiffFile, FileEntry, FileStatusEntry, MessageEnvelope, ModelOption, ModelSelection, PathInfo, ProjectDashboard, ServerConfig, Session, SessionStatus, SessionView, TodoItem } from "./types"
 import {
@@ -262,6 +269,9 @@ function App() {
     config.host && config.port > 0 ? "connecting" : "idle"
   )
   const [connectionMessage, setConnectionMessage] = useState<string>("")
+  const [eventStreamState, setEventStreamState] = useState<"idle" | "connecting" | "live" | "reconnecting" | "fallback">("idle")
+  const [liveEventCount, setLiveEventCount] = useState(0)
+  const [liveEventError, setLiveEventError] = useState<string | null>(null)
   const [lastTestedConfigKey, setLastTestedConfigKey] = useState<string | null>(null)
   const [sessionToDelete, setSessionToDelete] = useState<SessionView | null>(null)
   const [renamingSessionID, setRenamingSessionID] = useState<string | null>(null)
@@ -280,6 +290,7 @@ function App() {
   const backgroundFailureCountRef = useRef(0)
   const initialSessionLoadRef = useRef(true)
   const latestMessageTimesRef = useRef(new Map<string, { sessionUpdated: number; activityTime: number }>())
+  const selectedSessionRef = useRef<SessionView | null>(null)
 
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === selectedID) ?? null,
@@ -366,6 +377,15 @@ function App() {
         : connectionState === "offline"
           ? t('connection.offline')
           : "")
+  const eventStreamText = eventStreamState === "live"
+    ? t('events.live', { count: liveEventCount })
+    : eventStreamState === "connecting"
+      ? t('events.connecting')
+      : eventStreamState === "reconnecting"
+        ? t('events.reconnecting')
+        : eventStreamState === "fallback"
+          ? t('events.fallback', { error: liveEventError ?? t('events.unknownError') })
+          : ""
   const isSessionRunning = Boolean(selectedSession && ["busy", "retry"].includes(selectedSession.status))
   const isWaitingForOpenCodeReply = awaitingAssistantReply || busySending || isSessionRunning
   const isWorking = isWaitingForOpenCodeReply
@@ -907,6 +927,10 @@ function App() {
   }, [newSessionDirectory])
 
   useEffect(() => {
+    selectedSessionRef.current = selectedSession
+  }, [selectedSession])
+
+  useEffect(() => {
     if (!config.host || config.port <= 0) {
       setConnectionState("idle")
       setConnectionMessage("")
@@ -928,6 +952,56 @@ function App() {
     }, 3500)
     return () => clearInterval(timer)
   }, [config.host, config.port, config.username, config.password, selectedSession?.id, selectedNewSessionDirectory])
+
+  useEffect(() => {
+    if (!config.host || config.port <= 0) {
+      setEventStreamState("idle")
+      return
+    }
+    setEventStreamState("connecting")
+    const { url, headers } = api.eventStream(config)
+    let refreshTimer: ReturnType<typeof setTimeout> | undefined
+    const scheduleRefresh = () => {
+      if (refreshTimer !== undefined) return
+      refreshTimer = setTimeout(() => {
+        refreshTimer = undefined
+        refreshSessions(true).catch(() => undefined)
+        const selected = selectedSessionRef.current
+        if (selected) loadSelected(selected.id, selected.directory).catch(() => undefined)
+      }, 250)
+    }
+    const onEvent = (event: { data: unknown; name: string }) => {
+      const type = eventType(event.data) ?? event.name
+      if (type.startsWith("session.") || type.startsWith("message.") || type.startsWith("todo.")) {
+        setLiveEventCount((count) => count + 1)
+        scheduleRefresh()
+      }
+    }
+    const onStatus = (status: EventStreamStatus) => {
+      if (status.type === "connected") {
+        setLiveEventError(null)
+        setEventStreamState("live")
+      }
+      if (status.type === "reconnecting") setEventStreamState("reconnecting")
+      if (status.type === "connection-error") {
+        setLiveEventError(status.error)
+        setEventStreamState("fallback")
+      }
+    }
+    const subscription = isNativeEventTransport()
+      ? createNativeOpenCodeEventSubscription({
+          url,
+          username: config.username,
+          password: config.password,
+          onEvent,
+          onStatus
+        })
+      : createFetchOpenCodeEventSubscription({ url, headers, onEvent, onStatus })
+    return () => {
+      if (refreshTimer !== undefined) clearTimeout(refreshTimer)
+      subscription.close()
+    }
+  }, [config.host, config.port, config.username, config.password])
 
   useEffect(() => {
     if (!hasConfiguredServer) {
@@ -1154,6 +1228,12 @@ function App() {
                 <p className={`connection-status ${connectionState}`}>
                   {['connecting', 'reconnecting'].includes(connectionState) && <LoadingIcon size={14} />}
                   {connectionStatusText}
+                </p>
+              )}
+              {eventStreamText && (
+                <p className={`connection-status event-stream ${eventStreamState}`}>
+                  {['connecting', 'reconnecting'].includes(eventStreamState) && <LoadingIcon size={14} />}
+                  {eventStreamText}
                 </p>
               )}
             </div>

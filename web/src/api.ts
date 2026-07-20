@@ -1,4 +1,5 @@
 import { Capacitor, CapacitorHttp } from "@capacitor/core"
+import { streamURL } from "./opencode-events"
 import type {
   AgentOption,
   CommandInfo,
@@ -204,6 +205,12 @@ function modelWireName(model?: ModelSelection) {
 }
 
 export const api = {
+  eventStream(config: ServerConfig) {
+    const headers: Record<string, string> = {}
+    if (config.username && config.password) headers.Authorization = authHeader(config)
+    return { url: streamURL(baseUrl(config), "global"), headers }
+  },
+
   health(config: ServerConfig) {
     return request<HealthResponse>(config, "/global/health")
   },

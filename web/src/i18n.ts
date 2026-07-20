@@ -47,6 +47,11 @@ type TranslationKey =
   | 'connection.reconnecting'
   | 'connection.connected'
   | 'connection.offline'
+  | 'events.live'
+  | 'events.connecting'
+  | 'events.reconnecting'
+  | 'events.fallback'
+  | 'events.unknownError'
   | 'sessions.loadingTitle'
   | 'sessions.loadingHint'
   | 'sessions.offlineHint'
@@ -185,6 +190,11 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'connection.reconnecting': 'Connection is slow; retrying quietly...',
     'connection.connected': 'Connected',
     'connection.offline': 'OpenCode is not reachable',
+    'events.live': 'Live updates on ({count} events)',
+    'events.connecting': 'Starting live updates…',
+    'events.reconnecting': 'Live updates reconnecting…',
+    'events.fallback': 'Live updates unavailable; using refresh ({error})',
+    'events.unknownError': 'unknown error',
     'settings.connectionFailed': 'Connection failed: {message}',
     'settings.connectedTo': 'Connected to OpenCode {version}',
     'settings.language': 'Language',
@@ -329,6 +339,11 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'connection.reconnecting': 'Connessione lenta; riprovo in silenzio...',
     'connection.connected': 'Connesso',
     'connection.offline': 'OpenCode non è raggiungibile',
+    'events.live': 'Aggiornamenti live attivi ({count} eventi)',
+    'events.connecting': 'Avvio aggiornamenti live…',
+    'events.reconnecting': 'Riconnessione aggiornamenti live…',
+    'events.fallback': 'Aggiornamenti live non disponibili; uso il refresh ({error})',
+    'events.unknownError': 'errore sconosciuto',
     'settings.connectionFailed': 'Connessione fallita: {message}',
     'settings.connectedTo': 'Connesso a OpenCode {version}',
     'settings.language': 'Lingua',
@@ -473,6 +488,11 @@ const translations: Record<LanguageCode, Record<TranslationKey, string>> = {
     'connection.reconnecting': '連線較慢；正在安靜重試...',
     'connection.connected': '已連線',
     'connection.offline': '無法連線到 OpenCode',
+    'events.live': '即時更新已啟用（{count} 個事件）',
+    'events.connecting': '正在啟動即時更新…',
+    'events.reconnecting': '即時更新正在重新連線…',
+    'events.fallback': '即時更新不可用；改用重新整理（{error}）',
+    'events.unknownError': '未知錯誤',
     'settings.connectionFailed': '連線失敗：{message}',
     'settings.connectedTo': '已連線至 OpenCode {version}',
     'settings.language': '語言',

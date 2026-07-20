@@ -9,10 +9,12 @@
     "test:i18n": "node --experimental-strip-types src/i18n.test.mjs",
     "preview": "vite preview --host",
     "cap:sync": "npx cap sync",
+    "cap:sync:android": "npx cap sync android && node scripts/sync-native-live-events.mjs",
     "cap:add:android": "npx cap add android",
     "test:ui": "node src/ui-regression.test.mjs",
     "test:settings": "node src/settings-regression.test.mjs",
-    "test:model": "node src/model-regression.test.mjs"
+    "test:model": "node src/model-regression.test.mjs",
+    "test:events": "node --experimental-strip-types src/opencode-events.test.mjs"
   },
   "dependencies": {
     "@capacitor/android": "^8.3.4",
