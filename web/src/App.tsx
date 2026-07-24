@@ -1647,19 +1647,17 @@ function App() {
               onKeyDown={(event) => {
                 if (event.key === "Enter" && !event.shiftKey) {
                   event.preventDefault()
-                  if (!isWorking) {
-                    send().catch(() => undefined)
-                  }
+                  send().catch(() => undefined)
                 }
               }}
-              disabled={!selectedSession || isWorking}
-            />
-            <button 
-              onClick={isWorking ? abortSession : send}
               disabled={!selectedSession}
-              className={isWorking ? "btn-danger" : "btn-primary"}
+            />
+            <button
+              onClick={isWorking && !composer.trim() ? abortSession : send}
+              disabled={!selectedSession}
+              className={isWorking && !composer.trim() ? "btn-danger" : "btn-primary"}
             >
-              {isWorking ? (
+              {isWorking && !composer.trim() ? (
                 <>
                   <StopCircleIcon size={18} />
                   {t('detail.waiting')}
@@ -1672,7 +1670,7 @@ function App() {
               )}
             </button>
           </div>
-          
+
           {runtimeError && <div className="error fade-in">✗ {runtimeError}</div>}
         </main>
       )}
