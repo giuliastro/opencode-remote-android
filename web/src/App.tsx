@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react"
+import { App as CapacitorApp } from "@capacitor/app"
+import type { PluginListenerHandle } from "@capacitor/core"
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { api } from "./api"
@@ -906,6 +908,24 @@ function App() {
   useEffect(() => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, language)
   }, [language])
+
+  useEffect(() => {
+    let listenerHandle: PluginListenerHandle | undefined
+    CapacitorApp.addListener("backButton", () => {
+      setView((current) => {
+        if (current === "sessions") {
+          CapacitorApp.exitApp()
+          return current
+        }
+        return "sessions"
+      })
+    }).then((handle) => {
+      listenerHandle = handle
+    })
+    return () => {
+      listenerHandle?.remove()
+    }
+  }, [])
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
